@@ -459,7 +459,15 @@ function ChatInterface() {
   };
 
   const renderMessage = (message) => {
-    return message.content;
+    let content = message.content;
+    
+    // Bold text
+    content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+    
+    // Headings
+    content = content.replace(/###\s*(.*?)\s*(\n|$)/g, '<h3>$1</h3>');
+    
+    return <div dangerouslySetInnerHTML={{ __html: content }} />;
   };
 
   const handleAgree = () => {
