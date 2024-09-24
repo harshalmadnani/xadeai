@@ -1,179 +1,533 @@
-import React, { useState, useEffect } from 'react';
-import Anthropic from "@anthropic-ai/sdk";
+import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
+import OpenAI from "openai";
+
+const styles = {
+  chatInterface: {
+    width: '100vw',
+    height: '110vh',
+    margin: 0,
+    padding: 0,
+    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    display: 'flex',
+    flexDirection: 'column',
+    backgroundColor: '#1f1f1f',
+    color: '#e5e5e5',
+  },
+  heading: {
+    textAlign: 'center',
+    padding: '15px',
+    fontSize: '28px',
+    fontWeight: '600',
+    backgroundColor: '#2c2c2c',
+    borderBottom: '1px solid #444444',
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  messageListContainer: {
+    flexGrow: 1,
+    overflowY: 'auto',
+    marginTop: '60px', // Adjust based on your heading height
+    marginBottom: '70px', // Adjust based on your input form height
+    padding: '10px 20px',
+  },
+  messageList: {
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  message: {
+    display: 'flex',
+    alignItems: 'flex-start',
+    marginBottom: '15px',
+  },
+  avatar: {
+    width: '40px',
+    height: '40px',
+    borderRadius: '50%',
+    marginRight: '10px',
+  },
+  userAvatar: {
+    backgroundColor: '#4a90e2',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: '16px',
+  },
+  assistantAvatar: {
+    backgroundColor: '#50e3c2',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    color: '#ffffff',
+    fontWeight: 'bold',
+    fontSize: '16px',
+  },
+  bubble: {
+    padding: '12px 16px',
+    borderRadius: '20px',
+    maxWidth: '70%',
+    position: 'relative',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+  },
+  userBubble: {
+    backgroundColor: '#4a4a4a',
+    color: '#ffffff',
+    alignSelf: 'flex-end',
+  },
+  assistantBubble: {
+    backgroundColor: '#333333',
+    color: '#ffffff',
+    alignSelf: 'flex-start',
+  },
+  inputForm: {
+    display: 'flex',
+    padding: '15px 20px',
+    borderTop: '1px solid #444444',
+    backgroundColor: '#2c2c2c',
+    position: 'fixed',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  input: {
+    flexGrow: 1,
+    padding: '12px 16px',
+    fontSize: '16px',
+    border: 'none',
+    borderRadius: '20px',
+    marginRight: '10px',
+    backgroundColor: '#3a3a3a',
+    color: '#e5e5e5',
+    outline: 'none',
+  },
+  sendButton: {
+    padding: '12px 24px',
+    fontSize: '16px',
+    backgroundColor: '#4a90e2',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '20px',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s',
+  },
+  sendButtonDisabled: {
+    backgroundColor: '#7fb3e0',
+    cursor: 'not-allowed',
+  },
+  loading: {
+    textAlign: 'center',
+    padding: '10px',
+    backgroundColor: '#333333',
+    color: '#e5e5e5',
+    borderTop: '1px solid #444444',
+  },
+  error: {
+    textAlign: 'center',
+    padding: '10px',
+    backgroundColor: '#7f1f1f',
+    color: '#ff6b6b',
+    borderTop: '1px solid #a94442',
+  },
+  rawResponse: {
+    margin: '20px',
+    padding: '10px',
+    backgroundColor: '#2c2c2c',
+    borderRadius: '8px',
+    overflowX: 'auto',
+  },
+  codeExecutionResult: {
+    margin: '20px',
+    padding: '15px',
+    backgroundColor: '#2c2c2c',
+    borderRadius: '8px',
+    overflowX: 'auto',
+  },
+  pre: {
+    whiteSpace: 'pre-wrap',
+    wordWrap: 'break-word',
+    fontSize: '14px',
+    color: '#e5e5e5',
+  },
+  dataSection: {
+    margin: '20px',
+    padding: '10px',
+    backgroundColor: '#2c2c2c',
+    borderRadius: '8px',
+    overflowX: 'auto',
+  },
+  popup: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  popupContent: {
+    backgroundColor: '#2c2c2c',
+    padding: '20px',
+    borderRadius: '10px',
+    textAlign: 'center',
+    maxWidth: '80%',
+  },
+  popupText: {
+    marginBottom: '20px',
+    fontSize: '18px',
+    color: '#e5e5e5',
+  },
+  agreeButton: {
+    padding: '10px 20px',
+    fontSize: '16px',
+    backgroundColor: '#4a90e2',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s',
+  },
+  prefillContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    padding: '10px 20px',
+    backgroundColor: '#2c2c2c',
+    position: 'fixed',
+    bottom: '70px', // Adjust based on your input form height
+    left: 0,
+    right: 0,
+    zIndex: 9,
+  },
+  prefillButton: {
+    margin: '5px',
+    padding: '8px 12px',
+    fontSize: '14px',
+    backgroundColor: '#3a3a3a',
+    color: '#e5e5e5',
+    border: 'none',
+    borderRadius: '15px',
+    cursor: 'pointer',
+    transition: 'background-color 0.3s',
+  },
+};
+
+const openai = new OpenAI({
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY, // Make sure to prefix with REACT_APP_ for Create React App
+  dangerouslyAllowBrowser: true // Add this line
+});
 
 function ChatInterface() {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [rawResponse, setRawResponse] = useState(null);
   const [error, setError] = useState(null);
-  const [anthropic, setAnthropic] = useState(null);
+  const [showDisclaimerPopup, setShowDisclaimerPopup] = useState(() => {
+    return !localStorage.getItem('disclaimerAgreed');
+  });
+  const [showWalletPopup, setShowWalletPopup] = useState(false);
+  const [walletAddress, setWalletAddress] = useState('');
+  const [name, setName] = useState('bitcoin');
+  const [symbol, setSymbol] = useState('btc');
   const [priceHistory, setPriceHistory] = useState(null);
-  const [codeExecutionResult, setCodeExecutionResult] = useState(null);
+  const [priceHistoryData, setPriceHistoryData] = useState(null);
+  const [cryptoPanicData, setCryptoPanicData] = useState(null);
+  const [cryptoPanicNews, setCryptoPanicNews] = useState(null);
+  const [marketData, setMarketData] = useState(null);
+  const [metadata, setMetadata] = useState(null);
+
+  const messageListRef = useRef(null);
 
   useEffect(() => {
-    const initializeAnthropicClient = () => {
-      const apiKey = process.env.REACT_APP_ANTHROPIC_API_KEY || window.env?.REACT_APP_ANTHROPIC_API_KEY;
-      console.log('API Key:', apiKey ? 'Set' : 'Not set'); // Don't log the actual key
-      if (apiKey) {
-        setAnthropic(new Anthropic({
-          apiKey: apiKey,
-          dangerouslyAllowBrowser: true
-        }));
-      } else {
-        setError('API key is not set. Please check your environment variables.');
-      }
-    };
+    if (messageListRef.current) {
+      messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    }
+  }, [messages]);
 
-    initializeAnthropicClient();
+  useEffect(() => {
+    fetchPriceHistory();
+    fetchCryptoPanicData();
+    fetchMarketData();
+    fetchMetadata();
+  }, [name, symbol]);
 
-    // Function to fetch Bitcoin price history
-    const fetchBitcoinPriceHistory = async () => {
-      try {
-        const response = await fetch('https://api.mobula.io/api/1/market/history?asset=bitcoin', {
-          method: 'GET',
-          headers: {
-            'Authorization': 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
+  const fetchPriceHistory = async () => {
+    try {
+      const response = await axios.get(`https://api.mobula.io/api/1/market/history?asset=${name}`, {
+        headers: {
+          Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
+        }
+      });
+      setPriceHistory(response.data);
+      setPriceHistoryData(response.data.data.price_history);
+    } catch (error) {
+      console.error('Error fetching price history:', error);
+      setError('Failed to fetch price history');
+    }
+  };
+
+  const fetchCryptoPanicData = async () => {
+    try {
+      const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/?auth_token=2c962173d9c232ada498efac64234bfb8943ba70&public=true&currencies=${symbol}`);
+      setCryptoPanicData(response.data.results);
+      const newsItems = response.data.results.map(item => ({
+        title: item.title,
+        url: item.url
+      }));
+      setCryptoPanicNews(newsItems);
+    } catch (error) {
+      console.error('Error fetching CryptoPanic data:', error);
+      setError('Failed to fetch CryptoPanic data');
+    }
+  };
+
+  const fetchMarketData = async () => {
+    try {
+      const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${name}`, {
+        headers: {
+          Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
+        }
+      });
+      setMarketData(response.data);
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+      setError('Failed to fetch market data');
+    }
+  };
+
+  const fetchMetadata = async () => {
+    try {
+      const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${name}`, {
+        headers: {
+          Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
+        }
+      });
+      const { data } = response.data;
+      setMetadata({
+        id: data.id,
+        name: data.name,
+        symbol: data.symbol,
+        contracts: data.contracts,
+        blockchains: data.blockchains,
+        twitter: data.twitter,
+        website: data.website,
+        logo: data.logo,
+        price: data.price,
+        market_cap: data.market_cap,
+        liquidity: data.liquidity,
+        volume: data.volume,
+        description: data.description,
+        kyc: data.kyc,
+        audit: data.audit,
+        total_supply: data.total_supply,
+        circulating_supply: data.circulating_supply,
+        discord: data.discord,
+        max_supply: data.max_supply,
+        chat: data.chat,
+        tags: data.tags,
+        distribution: data.distribution,
+        investors: data.investors,
+        release_schedule: data.release_schedule
+      });
+    } catch (error) {
+      console.error('Error fetching metadata:', error);
+      setError('Failed to fetch metadata');
+    }
+  };
+
+  const callOpenAIAPI = async (userInput) => {
+    try {
+      const contextMessage = {
+        priceHistory: priceHistoryData,
+        cryptoPanicNews: cryptoPanicNews,
+        marketData: marketData,
+        metadata: metadata
+      };
+
+      const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini", // Using GPT-4 model
+        messages: [
+          { 
+            role: "system", 
+            content: "You are Xade AI, a trading assistant with access to real-time financial data. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability."
+          },
+          { 
+            role: "user", 
+            content: `Here's the current context: ${JSON.stringify(contextMessage)}`
+          },
+          { 
+            role: "user", 
+            content: userInput 
           }
-        });
+        ],
+        temperature: 0.7,
+        max_tokens: 3000,
+        top_p: 1,
+        frequency_penalty: 0,
+        presence_penalty: 0,
+      });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.data && data.data.price_history) {
-          console.log('Bitcoin price history:', data.data.price_history);
-          setPriceHistory(data.data.price_history);
-        } else {
-          throw new Error('Price history not found in the response');
-        }
-      } catch (error) {
-        console.error('Error fetching Bitcoin price history:', error);
-        setError('Failed to fetch Bitcoin price history');
-      }
-    };
-
-    fetchBitcoinPriceHistory();
-  }, []);
+      return response.choices[0].message.content;
+    } catch (error) {
+      console.error('Error calling OpenAI API:', error);
+      throw new Error('Failed to get AI response');
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!input.trim() || !anthropic) return;
+    if (!input.trim()) return;
 
     setIsLoading(true);
     setError(null);
-    setCodeExecutionResult(null);
+
     const userMessage = { role: 'user', content: input };
-    setMessages([...messages, userMessage]);
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
 
     try {
-      console.log('Sending request to Claude...');
-      const response = await anthropic.messages.create({
-        model: "claude-3-haiku-20240307",
-        max_tokens: 1000,
-        temperature: 0,
-        system: `You are a JavaScript coding assistant. The priceHistory variable contains Bitcoin's price history since inception in the format:
-[
-  [1367193600000, 141.96],
-  [1367280000000, 135.3],
-  ...
-]
-Where the first element of each subarray is the timestamp in milliseconds, and the second is the price.
+      // Fetch the latest data before calling the OpenAI API
+      await Promise.all([
+        fetchPriceHistory(),
+        fetchCryptoPanicData(),
+        fetchMarketData(),
+        fetchMetadata()
+      ]);
 
-Instructions:
-1. When asked for code related to Bitcoin price, use the priceHistory data.
-2. For non-price-related queries, create a JavaScript function that returns your response as a string.
-3. Provide only the code, without any explanation or additional text.
-4. Do not generate random prices or any other data; use priceHistory for actual data or omit price-related information if unavailable.
-5. Ensure your code is valid JavaScript and can be executed directly.`,
-        messages: [...messages, userMessage],
-      });
-
-      console.log('Raw response from Claude:', response);
-      setRawResponse(response);
-
-      const assistantMessage = response.content[0].text.trim();
-
-      // Execute the function if it's a valid JavaScript function
-      if (assistantMessage.startsWith('function') && assistantMessage.includes('return')) {
-        try {
-          const executeCode = new Function('priceHistory', 'return ' + assistantMessage);
-          const result = executeCode(priceHistory);
-          setCodeExecutionResult(result);
-          setMessages([...messages, userMessage, { role: 'assistant', content: result }]);
-        } catch (execError) {
-          console.error('Error executing code:', execError);
-          setError(`Error executing code: ${execError.message}`);
-          setCodeExecutionResult(`Failed to execute: ${assistantMessage}`);
-          setMessages([...messages, userMessage, { role: 'assistant', content: `Error: ${execError.message}` }]);
-        }
-      } else {
-        // If it's not a function, wrap it in a function that returns the code as a string
-        try {
-          const executeCode = new Function('priceHistory', `
-            ${assistantMessage}
-            return JSON.stringify({ result: currentPrice });
-          `);
-          const result = executeCode(priceHistory);
-          const parsedResult = JSON.parse(result);
-          setCodeExecutionResult(parsedResult.result);
-          setMessages([...messages, userMessage, { role: 'assistant', content: `Current BTC price: $${parsedResult.result}` }]);
-        } catch (execError) {
-          console.error('Error executing code:', execError);
-          setError(`Error executing code: ${execError.message}`);
-          setCodeExecutionResult(`Failed to execute: ${assistantMessage}`);
-          setMessages([...messages, userMessage, { role: 'assistant', content: `Error: ${execError.message}` }]);
-        }
-      }
-
+      // Call the OpenAI API
+      const aiResponse = await callOpenAIAPI(input);
+      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
-      console.error('Error:', error);
       setError(error.message);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    setIsLoading(false);
-    setInput('');
+  const renderMessage = (message) => {
+    return message.content;
+  };
+
+  const handleAgree = () => {
+    setShowDisclaimerPopup(false);
+    localStorage.setItem('disclaimerAgreed', 'true');
+    setShowWalletPopup(true);
+  };
+
+  const handleWalletSubmit = (e) => {
+    e.preventDefault();
+    if (walletAddress.trim()) {
+      // Here you can add logic to validate and store the wallet address
+      localStorage.setItem('walletAddress', walletAddress.trim());
+      setShowWalletPopup(false);
+    }
+  };
+
+  const handlePrefillClick = (question) => {
+    setInput(question);
   };
 
   return (
-    <div className="chat-interface">
-      <div className="message-list">
-        {messages.map((msg, index) => (
-          <div key={index} className={`message ${msg.role}`}>
-            {msg.content}
+    <div style={styles.chatInterface}>
+      <h1 style={styles.heading}>Xade AI</h1>
+      {showDisclaimerPopup && (
+        <div style={styles.popup}>
+          <div style={styles.popupContent}>
+            <div style={styles.popupText}>
+              Please agree to the disclaimer to continue.
+            </div>
+            <button style={styles.agreeButton} onClick={handleAgree}>
+              Agree
+            </button>
           </div>
+        </div>
+      )}
+      {showWalletPopup && (
+        <div style={styles.popup}>
+          <div style={styles.popupContent}>
+            <div style={styles.popupText}>
+              Please enter your wallet address:
+            </div>
+            <form onSubmit={handleWalletSubmit}>
+              <input
+                type="text"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="Enter wallet address"
+                style={{...styles.input, width: '100%', marginBottom: '10px'}}
+              />
+              <button type="submit" style={styles.agreeButton}>
+                Submit
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+      <div style={styles.messageListContainer}>
+        <div style={styles.messageList} ref={messageListRef}>
+          {messages.map((message, index) => (
+            <div key={index} style={styles.message}>
+              <div style={{
+                ...styles.avatar,
+                ...(message.role === 'user' ? styles.userAvatar : styles.assistantAvatar)
+              }}>
+                {message.role === 'user' ? 'U' : 'A'}
+              </div>
+              <div style={{
+                ...styles.bubble,
+                ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble)
+              }}>
+                {renderMessage(message)}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div style={styles.prefillContainer}>
+        {[
+          "What is Xade AI?",
+          "How can Xade AI help me?",
+          "What are Xade AI's capabilities?",
+          "Is Xade AI free to use?",
+        ].map((question, index) => (
+          <button
+            key={index}
+            style={styles.prefillButton}
+            onClick={() => handlePrefillClick(question)}
+          >
+            {question}
+          </button>
         ))}
       </div>
-      {/* {rawResponse && (
-        <div className="raw-response">
-          <h3>Raw Response from Claude:</h3>
-          <pre>{JSON.stringify(rawResponse, null, 2)}</pre>
-        </div>
-      )} */}
-      {error && <div className="error">{error}</div>}
-      <form onSubmit={handleSubmit}>
+
+      <form onSubmit={handleSubmit} style={styles.inputForm}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           placeholder="Type your message..."
           disabled={isLoading}
+          style={styles.input}
         />
-        <button type="submit" disabled={isLoading}>
+        <button 
+          type="submit" 
+          disabled={isLoading} 
+          style={{...styles.sendButton, ...(isLoading ? styles.sendButtonDisabled : {})}}
+        >
           {isLoading ? 'Sending...' : 'Send'}
         </button>
       </form>
-      {isLoading && <div className="loading">Loading...</div>}
-
-      {codeExecutionResult !== null && (
-        <div className="code-execution-result-container">
-          <div className="code-execution-result">
-            <h3>Result:</h3>
-            <pre>{JSON.stringify(codeExecutionResult, null, 2)}</pre>
-          </div>
-        </div>
-      )}
+      {isLoading && <div style={styles.loading}>Loading...</div>}
+      {error && <div style={styles.error}>{error}</div>}
     </div>
   );
 }
