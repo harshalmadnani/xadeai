@@ -234,7 +234,7 @@ function ChatInterface() {
     return !localStorage.getItem('disclaimerAgreed');
   });
   const [showWalletPopup, setShowWalletPopup] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('');
+  const [walletAddress, setWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519'); // Default wallet address
   const [name, setName] = useState('bitcoin');
   const [symbol, setSymbol] = useState('btc');
   const [priceHistory, setPriceHistory] = useState(null);
@@ -243,6 +243,8 @@ function ChatInterface() {
   const [cryptoPanicNews, setCryptoPanicNews] = useState(null);
   const [marketData, setMarketData] = useState(null);
   const [metadata, setMetadata] = useState(null);
+  const [historicPortfolioData, setHistoricPortfolioData] = useState(null);
+  const [walletPortfolio, setWalletPortfolio] = useState(null);
 
   const messageListRef = useRef(null);
 
@@ -257,7 +259,17 @@ function ChatInterface() {
     fetchCryptoPanicData();
     fetchMarketData();
     fetchMetadata();
-  }, [name, symbol]);
+    fetchHistoricPortfolioData();
+    fetchWalletPortfolio();
+  }, [name, symbol, walletAddress]);
+
+  useEffect(() => {
+    fetchHistoricPortfolioData();
+  }, [walletAddress]);
+
+  useEffect(() => {
+    fetchWalletPortfolio();
+  }, [walletAddress]);
 
   const fetchPriceHistory = async () => {
     try {
@@ -343,13 +355,45 @@ function ChatInterface() {
     }
   };
 
+  const fetchHistoricPortfolioData = async () => {
+    const options = {
+      method: 'GET',
+      headers: {
+        Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
+      }
+    };
+
+    try {
+      const response = await fetch(`https://api.mobula.io/api/1/wallet/history?wallets=${walletAddress}`, options);
+      const data = await response.json();
+      setHistoricPortfolioData(data);
+    } catch (error) {
+      console.error('Error fetching historic portfolio data:', error);
+      setError('Failed to fetch historic portfolio data');
+    }
+  };
+
+  const fetchWalletPortfolio = async () => {
+    const options = { method: 'GET' };
+    try {
+      const response = await fetch(`https://api.mobula.io/api/1/wallet/multi-portfolio?wallets=${walletAddress}`, options);
+      const data = await response.json();
+      setWalletPortfolio(data);
+    } catch (error) {
+      console.error('Error fetching wallet portfolio:', error);
+      setError('Failed to fetch wallet portfolio');
+    }
+  };
+
   const callOpenAIAPI = async (userInput) => {
     try {
       const contextMessage = {
         priceHistory: priceHistoryData,
         cryptoPanicNews: cryptoPanicNews,
         marketData: marketData,
-        metadata: metadata
+        metadata: metadata,
+        historicPortfolioData: historicPortfolioData,
+        walletPortfolio: walletPortfolio
       };
 
       const response = await openai.chat.completions.create({
@@ -357,7 +401,7 @@ function ChatInterface() {
         messages: [
           { 
             role: "system", 
-            content: "You are Xade AI, a trading assistant with access to real-time financial data. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability."
+            content: "You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability."
           },
           { 
             role: "user", 
@@ -399,7 +443,9 @@ function ChatInterface() {
         fetchPriceHistory(),
         fetchCryptoPanicData(),
         fetchMarketData(),
-        fetchMetadata()
+        fetchMetadata(),
+        fetchHistoricPortfolioData(),
+        fetchWalletPortfolio()
       ]);
 
       // Call the OpenAI API
