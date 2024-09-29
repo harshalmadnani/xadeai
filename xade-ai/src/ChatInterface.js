@@ -1,38 +1,80 @@
 import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import OpenAI from "openai";
+import { coins } from './coins';
+import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';     
 
 const styles = {
   chatInterface: {
     width: '100vw',
-    height: '110vh',
+    height: '100vh',
     margin: 0,
     padding: 0,
-    fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+    fontFamily: "'SK Modernist', sans-serif",
     display: 'flex',
     flexDirection: 'column',
-    backgroundColor: '#1f1f1f',
+    backgroundColor: '#000',
     color: '#e5e5e5',
   },
-  heading: {
-    textAlign: 'center',
+  header: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     padding: '15px',
+    backgroundColor: '#1a1a1a',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+  },
+  logo: {
+    width: '5%',
+    height: 'auto',
+    marginRight: '2%',
+  },
+  heading: {
     fontSize: '28px',
     fontWeight: '600',
-    backgroundColor: '#2c2c2c',
-    borderBottom: '1px solid #444444',
+    color: '#fff',
+    margin: 0,
+  },
+  walletAddress: {
+    fontSize: '14px',
+    color: '#e5e5e5',
+    cursor: 'pointer',
+  },
+  popup: {
     position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    backgroundColor: '#2a2a2a',
+    padding: '20px',
+    borderRadius: '10px',
+    boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    zIndex: 1000,
+  },
+  popupInput: {
+    width: '100%',
+    padding: '10px',
+    marginBottom: '10px',
+    backgroundColor: '#3a3a3a',
+    color: '#e5e5e5',
+    border: 'none',
+    borderRadius: '5px',
+  },
+  popupButton: {
+    padding: '10px 20px',
+    backgroundColor: '#4a90e2',
+    color: '#ffffff',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
   },
   messageListContainer: {
     flexGrow: 1,
     overflowY: 'auto',
-    marginTop: '60px', // Adjust based on your heading height
-    marginBottom: '70px', // Adjust based on your input form height
-    padding: '10px 20px',
+    padding: '20px',
+    display: 'flex',
+    flexDirection: 'column',
   },
   messageList: {
     display: 'flex',
@@ -71,7 +113,6 @@ const styles = {
     padding: '12px 16px',
     borderRadius: '20px',
     maxWidth: '70%',
-    position: 'relative',
     boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
   },
   userBubble: {
@@ -87,13 +128,7 @@ const styles = {
   inputForm: {
     display: 'flex',
     padding: '15px 20px',
-    borderTop: '1px solid #444444',
-    backgroundColor: '#2c2c2c',
-    position: 'fixed',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
+    backgroundColor: '#1a1a1a',
   },
   input: {
     flexGrow: 1,
@@ -109,120 +144,29 @@ const styles = {
   sendButton: {
     padding: '12px 24px',
     fontSize: '16px',
-    backgroundColor: '#4a90e2',
-    color: '#ffffff',
+    backgroundColor: 'white',
+    color: '#000',
     border: 'none',
     borderRadius: '20px',
     cursor: 'pointer',
     transition: 'background-color 0.3s',
+    fontWeight: 'bold',
   },
   sendButtonDisabled: {
     backgroundColor: '#7fb3e0',
     cursor: 'not-allowed',
   },
-  loading: {
-    textAlign: 'center',
-    padding: '10px',
-    backgroundColor: '#333333',
-    color: '#e5e5e5',
-    borderTop: '1px solid #444444',
-  },
-  error: {
-    textAlign: 'center',
-    padding: '10px',
-    backgroundColor: '#7f1f1f',
-    color: '#ff6b6b',
-    borderTop: '1px solid #a94442',
-  },
-  rawResponse: {
-    margin: '20px',
-    padding: '10px',
-    backgroundColor: '#2c2c2c',
-    borderRadius: '8px',
-    overflowX: 'auto',
-  },
-  codeExecutionResult: {
-    margin: '20px',
-    padding: '15px',
-    backgroundColor: '#2c2c2c',
-    borderRadius: '8px',
-    overflowX: 'auto',
-  },
-  pre: {
-    whiteSpace: 'pre-wrap',
-    wordWrap: 'break-word',
-    fontSize: '14px',
-    color: '#e5e5e5',
-  },
-  dataSection: {
-    margin: '20px',
-    padding: '10px',
-    backgroundColor: '#2c2c2c',
-    borderRadius: '8px',
-    overflowX: 'auto',
-  },
-  popup: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 100,
-  },
-  popupContent: {
-    backgroundColor: '#2c2c2c',
-    padding: '20px',
-    borderRadius: '10px',
-    textAlign: 'center',
-    maxWidth: '80%',
-  },
-  popupText: {
-    marginBottom: '20px',
-    fontSize: '18px',
-    color: '#e5e5e5',
-  },
-  agreeButton: {
-    padding: '10px 20px',
-    fontSize: '16px',
-    backgroundColor: '#4a90e2',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: '5px',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s',
-  },
-  prefillContainer: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    padding: '10px 20px',
-    backgroundColor: '#2c2c2c',
-    position: 'fixed',
-    bottom: '70px', // Adjust based on your input form height
-    left: 0,
-    right: 0,
-    zIndex: 9,
-  },
-  prefillButton: {
-    margin: '5px',
-    padding: '8px 12px',
-    fontSize: '14px',
-    backgroundColor: '#3a3a3a',
-    color: '#e5e5e5',
-    border: 'none',
-    borderRadius: '15px',
-    cursor: 'pointer',
-    transition: 'background-color 0.3s',
-  },
 };
 
 const openai = new OpenAI({
-  apiKey: process.env.REACT_APP_OPENAI_API_KEY, // Make sure to prefix with REACT_APP_ for Create React App
-  dangerouslyAllowBrowser: true // Add this line
+  apiKey: process.env.REACT_APP_OPENAI_API_KEY,
+  dangerouslyAllowBrowser: true
+});
+
+const darkTheme = createTheme({
+  palette: {
+    mode: 'dark',
+  },
 });
 
 function ChatInterface() {
@@ -230,21 +174,20 @@ function ChatInterface() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [showDisclaimerPopup, setShowDisclaimerPopup] = useState(() => {
-    return !localStorage.getItem('disclaimerAgreed');
-  });
-  const [showWalletPopup, setShowWalletPopup] = useState(false);
-  const [walletAddress, setWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519'); // Default wallet address
-  const [name, setName] = useState('bitcoin');
-  const [symbol, setSymbol] = useState('btc');
-  const [priceHistory, setPriceHistory] = useState(null);
+  const [walletAddress, setWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
   const [priceHistoryData, setPriceHistoryData] = useState(null);
-  const [cryptoPanicData, setCryptoPanicData] = useState(null);
   const [cryptoPanicNews, setCryptoPanicNews] = useState(null);
   const [marketData, setMarketData] = useState(null);
   const [metadata, setMetadata] = useState(null);
   const [historicPortfolioData, setHistoricPortfolioData] = useState(null);
   const [walletPortfolio, setWalletPortfolio] = useState(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [newWalletAddress, setNewWalletAddress] = useState('');
+
+  // New state variables
+  const [selectedCoin, setSelectedCoin] = useState(coins[0]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredCoins, setFilteredCoins] = useState(coins);
 
   const messageListRef = useRef(null);
 
@@ -261,24 +204,32 @@ function ChatInterface() {
     fetchMetadata();
     fetchHistoricPortfolioData();
     fetchWalletPortfolio();
-  }, [name, symbol, walletAddress]);
+  }, [selectedCoin, walletAddress]);
 
   useEffect(() => {
-    fetchHistoricPortfolioData();
-  }, [walletAddress]);
-
-  useEffect(() => {
-    fetchWalletPortfolio();
-  }, [walletAddress]);
+    const filtered = coins.filter(
+      (coin) =>
+        coin.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        coin.symbol.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredCoins(filtered);
+  }, [searchTerm]);
 
   const fetchPriceHistory = async () => {
     try {
-      const response = await axios.get(`https://api.mobula.io/api/1/market/history?asset=${name}`, {
+      const to = Date.now();
+      const from = to - 365 * 24 * 60 * 60 * 1000;
+
+      const response = await axios.get(`https://api.mobula.io/api/1/market/history`, {
+        params: {
+          asset: selectedCoin.name,
+          from: from,
+          to: to,
+        },
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setPriceHistory(response.data);
       setPriceHistoryData(response.data.data.price_history);
     } catch (error) {
       console.error('Error fetching price history:', error);
@@ -288,8 +239,7 @@ function ChatInterface() {
 
   const fetchCryptoPanicData = async () => {
     try {
-      const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/?auth_token=2c962173d9c232ada498efac64234bfb8943ba70&public=true&currencies=${symbol}`);
-      setCryptoPanicData(response.data.results);
+      const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/?auth_token=2c962173d9c232ada498efac64234bfb8943ba70&public=true&currencies=${selectedCoin.symbol}`);
       const newsItems = response.data.results.map(item => ({
         title: item.title,
         url: item.url
@@ -303,7 +253,7 @@ function ChatInterface() {
 
   const fetchMarketData = async () => {
     try {
-      const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${name}`, {
+      const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${selectedCoin.name}`, {
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
@@ -317,38 +267,12 @@ function ChatInterface() {
 
   const fetchMetadata = async () => {
     try {
-      const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${name}`, {
+      const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${selectedCoin.name}`, {
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      const { data } = response.data;
-      setMetadata({
-        id: data.id,
-        name: data.name,
-        symbol: data.symbol,
-        contracts: data.contracts,
-        blockchains: data.blockchains,
-        twitter: data.twitter,
-        website: data.website,
-        logo: data.logo,
-        price: data.price,
-        market_cap: data.market_cap,
-        liquidity: data.liquidity,
-        volume: data.volume,
-        description: data.description,
-        kyc: data.kyc,
-        audit: data.audit,
-        total_supply: data.total_supply,
-        circulating_supply: data.circulating_supply,
-        discord: data.discord,
-        max_supply: data.max_supply,
-        chat: data.chat,
-        tags: data.tags,
-        distribution: data.distribution,
-        investors: data.investors,
-        release_schedule: data.release_schedule
-      });
+      setMetadata(response.data);
     } catch (error) {
       console.error('Error fetching metadata:', error);
       setError('Failed to fetch metadata');
@@ -356,17 +280,16 @@ function ChatInterface() {
   };
 
   const fetchHistoricPortfolioData = async () => {
-    const options = {
-      method: 'GET',
-      headers: {
-        Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
-      }
-    };
-
     try {
-      const response = await fetch(`https://api.mobula.io/api/1/wallet/history?wallets=${walletAddress}`, options);
-      const data = await response.json();
-      setHistoricPortfolioData(data);
+      const response = await axios.get(`https://api.mobula.io/api/1/wallet/history`, {
+        params: {
+          wallets: walletAddress
+        },
+        headers: {
+          Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
+        }
+      });
+      setHistoricPortfolioData(response.data);
     } catch (error) {
       console.error('Error fetching historic portfolio data:', error);
       setError('Failed to fetch historic portfolio data');
@@ -374,11 +297,16 @@ function ChatInterface() {
   };
 
   const fetchWalletPortfolio = async () => {
-    const options = { method: 'GET' };
     try {
-      const response = await fetch(`https://api.mobula.io/api/1/wallet/multi-portfolio?wallets=${walletAddress}`, options);
-      const data = await response.json();
-      setWalletPortfolio(data);
+      const response = await axios.get(`https://api.mobula.io/api/1/wallet/multi-portfolio`, {
+        params: {
+          wallets: walletAddress
+        },
+        headers: {
+          Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
+        }
+      });
+      setWalletPortfolio(response.data);
     } catch (error) {
       console.error('Error fetching wallet portfolio:', error);
       setError('Failed to fetch wallet portfolio');
@@ -397,11 +325,11 @@ function ChatInterface() {
       };
 
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini", // Using GPT-4 model
+        model: "gpt-4o-mini",
         messages: [
           { 
             role: "system", 
-            content: "You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability."
+            content: "You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability, dont show logo in any case"
           },
           { 
             role: "user", 
@@ -438,7 +366,6 @@ function ChatInterface() {
     setInput('');
 
     try {
-      // Fetch the latest data before calling the OpenAI API
       await Promise.all([
         fetchPriceHistory(),
         fetchCryptoPanicData(),
@@ -448,7 +375,6 @@ function ChatInterface() {
         fetchWalletPortfolio()
       ]);
 
-      // Call the OpenAI API
       const aiResponse = await callOpenAIAPI(input);
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
@@ -461,70 +387,97 @@ function ChatInterface() {
   const renderMessage = (message) => {
     let content = message.content;
     
-    // Bold text
     content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    
-    // Headings
     content = content.replace(/###\s*(.*?)\s*(\n|$)/g, '<h3>$1</h3>');
     
     return <div dangerouslySetInnerHTML={{ __html: content }} />;
   };
 
-  const handleAgree = () => {
-    setShowDisclaimerPopup(false);
-    localStorage.setItem('disclaimerAgreed', 'true');
-    setShowWalletPopup(true);
+  const handleWalletAddressClick = () => {
+    setShowPopup(true);
+    setNewWalletAddress(walletAddress);
   };
 
-  const handleWalletSubmit = (e) => {
-    e.preventDefault();
-    if (walletAddress.trim()) {
-      // Here you can add logic to validate and store the wallet address
-      localStorage.setItem('walletAddress', walletAddress.trim());
-      setShowWalletPopup(false);
-    }
+  const handleWalletAddressChange = () => {
+    setWalletAddress(newWalletAddress);
+    setShowPopup(false);
+    // Refetch data with new wallet address
+    fetchHistoricPortfolioData();
+    fetchWalletPortfolio();
   };
 
-  const handlePrefillClick = (question) => {
-    setInput(question);
+  // Add this new function to handle search input
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
   };
 
   return (
     <div style={styles.chatInterface}>
-      <h1 style={styles.heading}>Xade AI</h1>
-      {showDisclaimerPopup && (
-        <div style={styles.popup}>
-          <div style={styles.popupContent}>
-            <div style={styles.popupText}>
-              Please agree to the disclaimer to continue.
+      <div style={{
+        ...styles.header,
+        justifyContent: 'space-between',
+      }}>
+        <img src='./XADE.png' alt="Xade AI Logo" style={styles.logo} />
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '20px',
+        }}>
+          <ThemeProvider theme={darkTheme}>
+            <div className="coin-selector">
+              <Select
+                value={selectedCoin.symbol}
+                onChange={(e) => setSelectedCoin(coins.find(coin => coin.symbol === e.target.value))}
+                renderValue={(selected) => (
+                  <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>
+                    <img src={selectedCoin.logo} alt={selectedCoin.name} style={{ width: 20, marginRight: 8 }} />
+                    {selected}
+                  </div>
+                )}
+                onOpen={() => setSearchTerm('')}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      backgroundColor: '#2a2a2a',
+                      color: 'white',
+                    },
+                  },
+                }}
+              >
+                <MenuItem>
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                  <input
+                    type="text"
+                    placeholder="Search coins..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      border: 'none',
+                      outline: 'none',
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: 'transparent',
+                      color: 'white',
+                    }}
+                  />
+                </MenuItem>
+                {filteredCoins.map((coin) => (
+                  <MenuItem key={coin.symbol} value={coin.symbol}>
+                    <img src={coin.logo} alt={coin.name} style={{ width: 20, marginRight: 8 }} />
+                    {coin.symbol} - {coin.name}
+                  </MenuItem>
+                ))}
+              </Select>
             </div>
-            <button style={styles.agreeButton} onClick={handleAgree}>
-              Agree
-            </button>
+          </ThemeProvider>
+          <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
+            {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
           </div>
         </div>
-      )}
-      {showWalletPopup && (
-        <div style={styles.popup}>
-          <div style={styles.popupContent}>
-            <div style={styles.popupText}>
-              Please enter your wallet address:
-            </div>
-            <form onSubmit={handleWalletSubmit}>
-              <input
-                type="text"
-                value={walletAddress}
-                onChange={(e) => setWalletAddress(e.target.value)}
-                placeholder="Enter wallet address"
-                style={{...styles.input, width: '100%', marginBottom: '10px'}}
-              />
-              <button type="submit" style={styles.agreeButton}>
-                Submit
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
+      </div>
       <div style={styles.messageListContainer}>
         <div style={styles.messageList} ref={messageListRef}>
           {messages.map((message, index) => (
@@ -545,24 +498,6 @@ function ChatInterface() {
           ))}
         </div>
       </div>
-      
-      <div style={styles.prefillContainer}>
-        {[
-          "What is Xade AI?",
-          "How can Xade AI help me?",
-          "What are Xade AI's capabilities?",
-          "Is Xade AI free to use?",
-        ].map((question, index) => (
-          <button
-            key={index}
-            style={styles.prefillButton}
-            onClick={() => handlePrefillClick(question)}
-          >
-            {question}
-          </button>
-        ))}
-      </div>
-
       <form onSubmit={handleSubmit} style={styles.inputForm}>
         <input
           type="text"
@@ -577,11 +512,23 @@ function ChatInterface() {
           disabled={isLoading} 
           style={{...styles.sendButton, ...(isLoading ? styles.sendButtonDisabled : {})}}
         >
-          {isLoading ? 'Sending...' : 'Send'}
+          {isLoading ? 'Analyzing...' : 'Send'}
         </button>
       </form>
-      {isLoading && <div style={styles.loading}>Loading...</div>}
       {error && <div style={styles.error}>{error}</div>}
+      {showPopup && (
+        <div style={styles.popup}>
+          <input
+            type="text"
+            value={newWalletAddress}
+            onChange={(e) => setNewWalletAddress(e.target.value)}
+            style={styles.popupInput}
+          />
+          <button onClick={handleWalletAddressChange} style={styles.popupButton}>
+            Set Wallet Address
+          </button>
+        </div>
+      )}
     </div>
   );
 }
