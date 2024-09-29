@@ -4,6 +4,10 @@ import OpenAI from "openai";
 import { coins } from './coins';
 import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';     
+import { createContext, useContext } from 'react';
+
+// Create a context for storing fetched data
+const DataContext = createContext(null);
 
 const styles = {
   chatInterface: {
@@ -156,6 +160,11 @@ const styles = {
     backgroundColor: '#7fb3e0',
     cursor: 'not-allowed',
   },
+  tokenCount: {
+    fontSize: '12px',
+    color: '#888',
+    marginTop: '5px',
+  },
 };
 
 const openai = new OpenAI({
@@ -175,12 +184,6 @@ function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [walletAddress, setWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
-  const [priceHistoryData, setPriceHistoryData] = useState(null);
-  const [cryptoPanicNews, setCryptoPanicNews] = useState(null);
-  const [marketData, setMarketData] = useState(null);
-  const [metadata, setMetadata] = useState(null);
-  const [historicPortfolioData, setHistoricPortfolioData] = useState(null);
-  const [walletPortfolio, setWalletPortfolio] = useState(null);
   const [showPopup, setShowPopup] = useState(false);
   const [newWalletAddress, setNewWalletAddress] = useState('');
 
@@ -188,6 +191,17 @@ function ChatInterface() {
   const [selectedCoin, setSelectedCoin] = useState(coins[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCoins, setFilteredCoins] = useState(coins);
+  const [inputTokens, setInputTokens] = useState(0);
+
+  // Create a data object to store all fetched data
+  const [data, setData] = useState({
+    priceHistoryData: null,
+    cryptoPanicNews: null,
+    marketData: null,
+    metadata: null,
+    historicPortfolioData: null,
+    walletPortfolio: null,
+  });
 
   const messageListRef = useRef(null);
 
@@ -215,6 +229,7 @@ function ChatInterface() {
     setFilteredCoins(filtered);
   }, [searchTerm]);
 
+  // Modify the fetch functions to update the data object
   const fetchPriceHistory = async () => {
     try {
       const to = Date.now();
@@ -230,7 +245,7 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setPriceHistoryData(response.data.data.price_history);
+      setData(prevData => ({ ...prevData, priceHistoryData: response.data.data.price_history }));
     } catch (error) {
       console.error('Error fetching price history:', error);
       setError('Failed to fetch price history');
@@ -244,7 +259,7 @@ function ChatInterface() {
         title: item.title,
         url: item.url
       }));
-      setCryptoPanicNews(newsItems);
+      setData(prevData => ({ ...prevData, cryptoPanicNews: newsItems }));
     } catch (error) {
       console.error('Error fetching CryptoPanic data:', error);
       setError('Failed to fetch CryptoPanic data');
@@ -258,7 +273,7 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setMarketData(response.data);
+      setData(prevData => ({ ...prevData, marketData: response.data }));
     } catch (error) {
       console.error('Error fetching market data:', error);
       setError('Failed to fetch market data');
@@ -272,7 +287,7 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setMetadata(response.data);
+      setData(prevData => ({ ...prevData, metadata: response.data }));
     } catch (error) {
       console.error('Error fetching metadata:', error);
       setError('Failed to fetch metadata');
@@ -289,7 +304,7 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setHistoricPortfolioData(response.data);
+      setData(prevData => ({ ...prevData, historicPortfolioData: response.data }));
     } catch (error) {
       console.error('Error fetching historic portfolio data:', error);
       setError('Failed to fetch historic portfolio data');
@@ -306,34 +321,30 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setWalletPortfolio(response.data);
+      setData(prevData => ({ ...prevData, walletPortfolio: response.data }));
     } catch (error) {
       console.error('Error fetching wallet portfolio:', error);
       setError('Failed to fetch wallet portfolio');
     }
   };
 
+  // Function to get data based on the key
+  const getData = (key) => {
+    return data[key];
+  };
+
   const callOpenAIAPI = async (userInput) => {
     try {
-      const contextMessage = {
-        priceHistory: priceHistoryData,
-        cryptoPanicNews: cryptoPanicNews,
-        marketData: marketData,
-        metadata: metadata,
-        historicPortfolioData: historicPortfolioData,
-        walletPortfolio: walletPortfolio
-      };
-
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { 
             role: "system", 
-            content: "You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability, dont show logo in any case"
+            content: "You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability, don't show logo in any case"
           },
           { 
             role: "user", 
-            content: `Here's the current context: ${JSON.stringify(contextMessage)}`
+            content: `Here's the current context: ${JSON.stringify(data)}`
           },
           { 
             role: "user", 
@@ -346,6 +357,10 @@ function ChatInterface() {
         frequency_penalty: 0,
         presence_penalty: 0,
       });
+
+      // Calculate and set input tokens
+      const inputTokenCount = response.usage.prompt_tokens;
+      setInputTokens(inputTokenCount);
 
       return response.choices[0].message.content;
     } catch (error) {
@@ -384,13 +399,31 @@ function ChatInterface() {
     }
   };
 
-  const renderMessage = (message) => {
+  const renderMessage = (message, index) => {
     let content = message.content;
     
     content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     content = content.replace(/###\s*(.*?)\s*(\n|$)/g, '<h3>$1</h3>');
     
-    return <div dangerouslySetInnerHTML={{ __html: content }} />;
+    return (
+      <div key={index} style={styles.message}>
+        <div style={{
+          ...styles.avatar,
+          ...(message.role === 'user' ? styles.userAvatar : styles.assistantAvatar)
+        }}>
+          {message.role === 'user' ? 'U' : 'A'}
+        </div>
+        <div style={{
+          ...styles.bubble,
+          ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble)
+        }}>
+          <div dangerouslySetInnerHTML={{ __html: content }} />
+          {message.role === 'user' && index === messages.length - 2 && (
+            <div style={styles.tokenCount}>Input Tokens: {inputTokens}</div>
+          )}
+        </div>
+      </div>
+    );
   };
 
   const handleWalletAddressClick = () => {
@@ -480,22 +513,7 @@ function ChatInterface() {
       </div>
       <div style={styles.messageListContainer}>
         <div style={styles.messageList} ref={messageListRef}>
-          {messages.map((message, index) => (
-            <div key={index} style={styles.message}>
-              <div style={{
-                ...styles.avatar,
-                ...(message.role === 'user' ? styles.userAvatar : styles.assistantAvatar)
-              }}>
-                {message.role === 'user' ? 'U' : 'A'}
-              </div>
-              <div style={{
-                ...styles.bubble,
-                ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble)
-              }}>
-                {renderMessage(message)}
-              </div>
-            </div>
-          ))}
+          {messages.map((message, index) => renderMessage(message, index))}
         </div>
       </div>
       <form onSubmit={handleSubmit} style={styles.inputForm}>
