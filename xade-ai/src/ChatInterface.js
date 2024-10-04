@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import OpenAI from "openai";
 import { coins } from './coins';
-import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider } from '@mui/material';
+import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider, Alert, Snackbar, Typography } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';     
 import { createContext, useContext } from 'react';
 
@@ -165,6 +165,16 @@ const styles = {
     color: '#888',
     marginTop: '5px',
   },
+  executionResult: {
+    marginTop: '10px',
+    padding: '10px',
+    backgroundColor: '#2a2a2a',
+    borderRadius: '5px',
+  },
+  executionResultHeader: {
+    color: '#50e3c2',
+    marginBottom: '5px',
+  },
 };
 
 const openai = new OpenAI({
@@ -185,9 +195,7 @@ function ChatInterface() {
   const [error, setError] = useState(null);
   const [walletAddress, setWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
   const [showPopup, setShowPopup] = useState(false);
-  const [newWalletAddress, setNewWalletAddress] = useState('');
-
-  // New state variables
+  const [newWalletAddress, setNewWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
   const [selectedCoin, setSelectedCoin] = useState(coins[0]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCoins, setFilteredCoins] = useState(coins);
@@ -202,6 +210,12 @@ function ChatInterface() {
     historicPortfolioData: null,
     walletPortfolio: null,
   });
+
+  // Add a new state for error snackbar
+  const [errorSnackbar, setErrorSnackbar] = useState({ open: false, message: '' });
+
+  // Add a new state for tracking API response time
+  const [responseTime, setResponseTime] = useState(null);
 
   const messageListRef = useRef(null);
 
@@ -229,7 +243,7 @@ function ChatInterface() {
     setFilteredCoins(filtered);
   }, [searchTerm]);
 
-  // Modify the fetch functions to update the data object
+  // Modify the fetch functions to use try-catch and update error state
   const fetchPriceHistory = async () => {
     try {
       const to = Date.now();
@@ -248,7 +262,7 @@ function ChatInterface() {
       setData(prevData => ({ ...prevData, priceHistoryData: response.data.data.price_history }));
     } catch (error) {
       console.error('Error fetching price history:', error);
-      setError('Failed to fetch price history');
+      setErrorSnackbar({ open: true, message: 'Failed to fetch price history' });
     }
   };
 
@@ -262,7 +276,7 @@ function ChatInterface() {
       setData(prevData => ({ ...prevData, cryptoPanicNews: newsItems }));
     } catch (error) {
       console.error('Error fetching CryptoPanic data:', error);
-      setError('Failed to fetch CryptoPanic data');
+      setErrorSnackbar({ open: true, message: 'Failed to fetch CryptoPanic data' });
     }
   };
 
@@ -273,10 +287,15 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setData(prevData => ({ ...prevData, marketData: response.data }));
+      // Check if the response data has a 'data' property
+      if (response.data && response.data.data) {
+        setData(prevData => ({ ...prevData, marketData: response.data.data }));
+      } else {
+        throw new Error('Invalid market data structure');
+      }
     } catch (error) {
       console.error('Error fetching market data:', error);
-      setError('Failed to fetch market data');
+      setErrorSnackbar({ open: true, message: 'Failed to fetch market data' });
     }
   };
 
@@ -287,10 +306,10 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setData(prevData => ({ ...prevData, metadata: response.data }));
+      setData(prevData => ({ ...prevData, metadata: response.data}));
     } catch (error) {
       console.error('Error fetching metadata:', error);
-      setError('Failed to fetch metadata');
+      setErrorSnackbar({ open: true, message: 'Failed to fetch metadata' });
     }
   };
 
@@ -307,7 +326,7 @@ function ChatInterface() {
       setData(prevData => ({ ...prevData, historicPortfolioData: response.data }));
     } catch (error) {
       console.error('Error fetching historic portfolio data:', error);
-      setError('Failed to fetch historic portfolio data');
+      setErrorSnackbar({ open: true, message: 'Failed to fetch historic portfolio data' });
     }
   };
 
@@ -324,7 +343,7 @@ function ChatInterface() {
       setData(prevData => ({ ...prevData, walletPortfolio: response.data }));
     } catch (error) {
       console.error('Error fetching wallet portfolio:', error);
-      setError('Failed to fetch wallet portfolio');
+      setErrorSnackbar({ open: true, message: 'Failed to fetch wallet portfolio' });
     }
   };
 
@@ -336,15 +355,28 @@ function ChatInterface() {
   const callOpenAIAPI = async (userInput) => {
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "ft:gpt-4o-mini-2024-07-18:xade-ai::AEfTPsbe",
         messages: [
           { 
             role: "system", 
-            content: "You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Use the provided context to answer user queries accurately. Always format your responses using markdown for better readability, don't show logo in any case"
-          },
-          { 
-            role: "user", 
-            content: `Here's the current context: ${JSON.stringify(data)}`
+            content: `You are Xade AI, a trading assistant with access to real-time financial data and wallet information. You have access to the following data:
+
+1. priceHistoryData: An array of objects containing historical price data for the selected coin. Each object has 'date' and 'price' properties.
+2. cryptoPanicNews: An array of news items related to the selected coin. Each item has 'title' and 'url' properties.
+3. marketData: An object containing current market data for the selected coin, including price, market cap, volume, etc.
+4. metadata: An object containing metadata about the selected coin, such as description, website, social media links, etc.
+5. historicPortfolioData: An object containing historical portfolio data for the user's wallet.
+6. walletPortfolio: An object containing current portfolio data for the user's wallet.
+7. selectedCoin: An object containing information about the currently selected coin, including 'name' and 'symbol' properties.
+
+To answer the user's query, you should generate JavaScript code that accesses and processes this data as needed. The code you generate will be executed by our system to provide the answer. Please format your response as follows:
+
+1. Include the JavaScript code within a code block, starting with \\\javascript and ending with \\\.
+2. The last line of your code should return the processed data.
+3. Don't show any comments.
+4. Always use optional chaining (?.) when accessing object properties.
+
+Your response will be executed, and the result will be appended to your message.`
           },
           { 
             role: "user", 
@@ -369,18 +401,21 @@ function ChatInterface() {
     }
   };
 
+  // Modify the handleSubmit function to track response time
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
     setIsLoading(true);
     setError(null);
+    const startTime = Date.now();
 
     const userMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
     setInput('');
 
     try {
+      // Fetch all data before calling the AI
       await Promise.all([
         fetchPriceHistory(),
         fetchCryptoPanicData(),
@@ -391,19 +426,67 @@ function ChatInterface() {
       ]);
 
       const aiResponse = await callOpenAIAPI(input);
-      setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      
+      // Extract code from AI response
+      const codeMatch = aiResponse.match(/```javascript\n([\s\S]*?)\n```/);
+      if (codeMatch && codeMatch[1]) {
+        const code = codeMatch[1];
+        // Execute the code
+        const result = await executeCode(code);
+        // Append the result to the AI response
+        const fullResponse = `${aiResponse}\n\n**Execution Result:**\n\`\`\`\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+        setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      }
+
+      const endTime = Date.now();
+      setResponseTime(endTime - startTime);
     } catch (error) {
       setError(error.message);
+      setErrorSnackbar({ open: true, message: error.message });
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Function to execute the code generated by GPT
+  const executeCode = async (code) => {
+    try {
+      // Create a function from the code string
+      const func = new Function('data', 'selectedCoin', `
+        const { priceHistoryData, cryptoPanicNews, marketData, metadata, historicPortfolioData, walletPortfolio } = data;
+        ${code}
+      `);
+      
+      // Execute the function with the current data and selectedCoin
+      console.log('Executing code:', code);
+      console.log('Data passed to function:', data);
+      console.log('Selected coin:', selectedCoin);
+      const result = await func(data, selectedCoin);
+      console.log('Execution result:', result);
+      
+      if (result === undefined) {
+        throw new Error('Execution result is undefined. Make sure the code returns a value.');
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error executing code:', error);
+      return `Error: ${error.message}`;
+    }
+  };
+
+  // Modify the renderMessage function to include response time
   const renderMessage = (message, index) => {
     let content = message.content;
     
     content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     content = content.replace(/###\s*(.*?)\s*(\n|$)/g, '<h3>$1</h3>');
+    
+    // Parse the execution result
+    const executionResultMatch = content.match(/\*\*Execution Result:\*\*\n```\n([\s\S]*?)\n```/);
+    const executionResult = executionResultMatch ? executionResultMatch[1] : null;
     
     return (
       <div key={index} style={styles.message}>
@@ -420,6 +503,21 @@ function ChatInterface() {
           <div dangerouslySetInnerHTML={{ __html: content }} />
           {message.role === 'user' && index === messages.length - 2 && (
             <div style={styles.tokenCount}>Input Tokens: {inputTokens}</div>
+          )}
+          {message.role === 'assistant' && index === messages.length - 1 && responseTime && (
+            <Typography variant="caption" style={{ marginTop: '5px', color: '#888' }}>
+              Response time: {responseTime}ms
+            </Typography>
+          )}
+          {executionResult && (
+            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#2a2a2a', borderRadius: '5px' }}>
+              <Typography variant="subtitle2" style={{ color: '#50e3c2', marginBottom: '5px' }}>
+                Execution Result:
+              </Typography>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+                {executionResult}
+              </pre>
+            </div>
           )}
         </div>
       </div>
@@ -442,6 +540,14 @@ function ChatInterface() {
   // Add this new function to handle search input
   const handleSearchChange = (event) => {
     setSearchTerm(event.target.value);
+  };
+
+  // Add a function to handle closing the error snackbar
+  const handleCloseErrorSnackbar = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setErrorSnackbar({ ...errorSnackbar, open: false });
   };
 
   return (
@@ -506,6 +612,13 @@ function ChatInterface() {
               </Select>
             </div>
           </ThemeProvider>
+          <div style={{ color: 'white' }}>
+            ${data.marketData?.price?.toFixed(2) || 'N/A'}
+          </div>
+          {/* Simplified website display */}
+          <div style={{ color: 'white', fontSize: '14px' }}>
+            {data.metadata?.data?.website}
+          </div>
           <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
             {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
           </div>
@@ -547,6 +660,11 @@ function ChatInterface() {
           </button>
         </div>
       )}
+      <Snackbar open={errorSnackbar.open} autoHideDuration={6000} onClose={handleCloseErrorSnackbar}>
+        <Alert onClose={handleCloseErrorSnackbar} severity="error" sx={{ width: '100%' }}>
+          {errorSnackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }
