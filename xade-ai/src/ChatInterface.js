@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import OpenAI from "openai";
 import { coins } from './coins';
-import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider, Alert, Snackbar, Typography } from '@mui/material';
+import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider, Alert, Snackbar, Typography, Paper, Link } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';     
 import { createContext, useContext } from 'react';
 
@@ -175,6 +175,23 @@ const styles = {
     color: '#50e3c2',
     marginBottom: '5px',
   },
+  rawDataContainer: {
+    margin: '20px',
+    padding: '10px',
+    backgroundColor: '#2a2a2a',
+    borderRadius: '5px',
+  },
+  rawDataPre: {
+    whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
+  },
+  walletPortfolioContainer: {
+    backgroundColor: '#2a2a2a',
+    padding: '20px',
+    borderRadius: '10px',
+    margin: '20px 0',
+    color: '#e5e5e5',
+  },
 };
 
 const openai = new OpenAI({
@@ -196,7 +213,8 @@ function ChatInterface() {
   const [walletAddress, setWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
   const [showPopup, setShowPopup] = useState(false);
   const [newWalletAddress, setNewWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
-  const [selectedCoin, setSelectedCoin] = useState(coins[0]);
+  const [selectedToken, setSelectedToken] = useState(coins[0]);
+  const [selectedCoin, setSelectedCoin] = useState('bitcoin');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCoins, setFilteredCoins] = useState(coins);
   const [inputTokens, setInputTokens] = useState(0);
@@ -205,7 +223,6 @@ function ChatInterface() {
   const [data, setData] = useState({
     priceHistoryData: null,
     cryptoPanicNews: null,
-    marketData: null,
     metadata: null,
     historicPortfolioData: null,
     walletPortfolio: null,
@@ -219,6 +236,34 @@ function ChatInterface() {
 
   const messageListRef = useRef(null);
 
+  const [marketData, setMarketData] = useState({});
+  const [metadata, setMetadata] = useState({});
+  const [totalWalletBalance, setTotalWalletBalance] = useState(0);
+  const [walletAddresses, setWalletAddresses] = useState([]);
+  const [totalRealizedPNL, setTotalRealizedPNL] = useState(0);
+  const [totalUnrealizedPNL, setTotalUnrealizedPNL] = useState(0);
+  const [assets, setAssets] = useState([]);
+  const [totalPNLHistory, setTotalPNLHistory] = useState({
+    '24h': { realized: 0, unrealized: 0 },
+    '7d': { realized: 0, unrealized: 0 },
+    '30d': { realized: 0, unrealized: 0 },
+    '1y': { realized: 0, unrealized: 0 },
+  });
+  const [isWalletPortfolioLoading, setIsWalletPortfolioLoading] = useState(true);
+  const [historicPortfolioData, setHistoricPortfolioData] = useState(null);
+  const [priceHistoryData, setPriceHistoryData] = useState({});
+
+  // Add this constant after the existing state declarations
+  const priceHistory = Object.entries(priceHistoryData).map(([coinName, data]) => ({
+    coinName,
+    data: data.map(item => ({
+      date: new Date(item[0]),
+      price: item[1],
+      volume: item[2],
+      marketCap: item[3]
+    }))
+  }));
+
   useEffect(() => {
     if (messageListRef.current) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
@@ -226,10 +271,10 @@ function ChatInterface() {
   }, [messages]);
 
   useEffect(() => {
-    fetchPriceHistory();
-    fetchCryptoPanicData();
-    fetchMarketData();
-    fetchMetadata();
+    fetchPriceHistory(selectedCoin);
+    fetchCryptoPanicData(selectedCoin);
+    fetchMarketData(selectedCoin);
+    fetchMetadata(selectedCoin);
     fetchHistoricPortfolioData();
     fetchWalletPortfolio();
   }, [selectedCoin, walletAddress]);
@@ -244,14 +289,25 @@ function ChatInterface() {
   }, [searchTerm]);
 
   // Modify the fetch functions to use try-catch and update error state
-  const fetchPriceHistory = async () => {
+  const fetchPriceHistory = async (coinname = selectedCoin, from = null, to = null) => {
     try {
-      const to = Date.now();
-      const from = to - 365 * 24 * 60 * 60 * 1000;
+      if (!coinname) {
+        console.error('Attempted to fetch price history with undefined coinname');
+        setErrorSnackbar({
+          open: true,
+          message: 'Cannot fetch price history: Coin name is undefined'
+        });
+        return;
+      }
+
+      to = to || Date.now();
+      from = from || to - 365 * 24 * 60 * 60 * 1000; // Default to 1 year if not provided
+
+      console.log(`Fetching price history for ${coinname} from ${new Date(from)} to ${new Date(to)}...`);
 
       const response = await axios.get(`https://api.mobula.io/api/1/market/history`, {
         params: {
-          asset: selectedCoin.name,
+          asset: coinname,
           from: from,
           to: to,
         },
@@ -259,79 +315,216 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setData(prevData => ({ ...prevData, priceHistoryData: response.data.data.price_history }));
+
+      if (response.data && response.data.data && response.data.data.price_history) {
+        setPriceHistoryData(prevData => ({ 
+          ...prevData, 
+          [coinname]: response.data.data.price_history
+        }));
+        console.log(`Price history for ${coinname} updated successfully.`);
+      } else {
+        console.error('Invalid price history data structure:', response.data);
+        throw new Error('Invalid price history data structure');
+      }
     } catch (error) {
-      console.error('Error fetching price history:', error);
-      setErrorSnackbar({ open: true, message: 'Failed to fetch price history' });
+      console.error(`Error fetching price history for ${coinname}:`, error);
+      console.error('Error details:', error.response?.data || error.message);
+      setErrorSnackbar({ 
+        open: true, 
+        message: `Failed to fetch price history for ${coinname}: ${error.message}`
+      });
     }
   };
 
-  const fetchCryptoPanicData = async () => {
+  const fetchCryptoPanicData = async (coinname) => {
     try {
-      const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/?auth_token=2c962173d9c232ada498efac64234bfb8943ba70&public=true&currencies=${selectedCoin.symbol}`);
-      const newsItems = response.data.results.map(item => ({
-        title: item.title,
-        url: item.url
-      }));
-      setData(prevData => ({ ...prevData, cryptoPanicNews: newsItems }));
+      if (!coinname) {
+        console.error('Attempted to fetch CryptoPanic data with undefined coinname');
+        setErrorSnackbar({
+          open: true,
+          message: 'Cannot fetch CryptoPanic data: Coin name is undefined'
+        });
+        return;
+      }
+
+      const coin = coins.find(c => c.name.toLowerCase() === coinname.toLowerCase());
+      if (!coin) {
+        throw new Error(`Coin not found: ${coinname}`);
+      }
+
+      console.log(`Fetching CryptoPanic data for ${coinname} (${coin.symbol})...`);
+      const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/`, {
+        params: {
+          auth_token: '2c962173d9c232ada498efac64234bfb8943ba70',
+          public: 'true',
+          currencies: coin.symbol
+        }
+      });
+
+      if (response.data && response.data.results) {
+        const newsItems = response.data.results.map(item => ({
+          title: item.title,
+          url: item.url
+        }));
+        setData(prevData => ({ 
+          ...prevData, 
+          cryptoPanicNews: { 
+            ...prevData.cryptoPanicNews, 
+            [coinname]: newsItems 
+          } 
+        }));
+        console.log(`CryptoPanic data for ${coinname} updated successfully.`);
+      } else {
+        console.error('Invalid CryptoPanic data structure:', response.data);
+        throw new Error('Invalid CryptoPanic data structure');
+      }
     } catch (error) {
-      console.error('Error fetching CryptoPanic data:', error);
-      setErrorSnackbar({ open: true, message: 'Failed to fetch CryptoPanic data' });
+      console.error(`Error fetching CryptoPanic data for ${coinname}:`, error);
+      console.error('Error details:', error.response?.data || error.message);
+      setErrorSnackbar({ 
+        open: true, 
+        message: `Failed to fetch CryptoPanic data for ${coinname}: ${error.message}`
+      });
     }
   };
 
-  const fetchMarketData = async () => {
+  const fetchMarketData = async (coinname) => {
+    if (!coinname) {
+      console.error('Attempted to fetch market data with undefined coinname');
+      setErrorSnackbar({
+        open: true,
+        message: 'Cannot fetch market data: Coin name is undefined'
+      });
+      return;
+    }
+
     try {
-      const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${selectedCoin.name}`, {
+      console.log(`Fetching market data for ${coinname}...`);
+      const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${coinname}`, {
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      // Check if the response data has a 'data' property
+      
+      console.log('Response received:', response);
+
       if (response.data && response.data.data) {
-        setData(prevData => ({ ...prevData, marketData: response.data.data }));
+        setMarketData(prevData => ({
+          ...prevData,
+          [coinname]: response.data.data
+        }));
+        console.log(`Market data for ${coinname} updated successfully.`);
       } else {
+        console.error('Invalid market data structure:', response.data);
         throw new Error('Invalid market data structure');
       }
     } catch (error) {
-      console.error('Error fetching market data:', error);
-      setErrorSnackbar({ open: true, message: 'Failed to fetch market data' });
+      console.error(`Error fetching market data for ${coinname}:`, error);
+      console.error('Error details:', error.response?.data || error.message);
+      setErrorSnackbar({ 
+        open: true, 
+        message: `Failed to fetch market data for ${coinname}: ${error.message}`
+      });
     }
   };
 
-  const fetchMetadata = async () => {
+  // Function to get market data for a specific coin
+  const getMarketData = (coinname) => {
+    if (!marketData[coinname]) {
+      fetchMarketData(coinname);
+      return null;
+    }
+    return marketData[coinname];
+  };
+
+  const fetchMetadata = async (coinname) => {
+    if (!coinname) {
+      console.error('Attempted to fetch metadata with undefined coinname');
+      setErrorSnackbar({
+        open: true,
+        message: 'Cannot fetch metadata: Coin name is undefined'
+      });
+      return;
+    }
+
     try {
-      const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${selectedCoin.name}`, {
+      console.log(`Fetching metadata for ${coinname}...`);
+      const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${coinname}`, {
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setData(prevData => ({ ...prevData, metadata: response.data}));
+      
+      console.log('Metadata response received:', response);
+
+      if (response.data && response.data.data) {
+        setMetadata(prevData => ({
+          ...prevData,
+          [coinname]: response.data.data
+        }));
+        console.log(`Metadata for ${coinname} updated successfully.`);
+      } else {
+        console.error('Invalid metadata structure:', response.data);
+        throw new Error('Invalid metadata structure');
+      }
     } catch (error) {
-      console.error('Error fetching metadata:', error);
-      setErrorSnackbar({ open: true, message: 'Failed to fetch metadata' });
+      console.error(`Error fetching metadata for ${coinname}:`, error);
+      console.error('Error details:', error.response?.data || error.message);
+      setErrorSnackbar({ 
+        open: true, 
+        message: `Failed to fetch metadata for ${coinname}: ${error.message}`
+      });
     }
   };
 
-  const fetchHistoricPortfolioData = async () => {
+  // Add a function to get metadata for a specific coin
+  const getMetadata = (coinname) => {
+    if (!metadata[coinname]) {
+      fetchMetadata(coinname);
+      return null;
+    }
+    return metadata[coinname];
+  };
+
+  const fetchHistoricPortfolioData = async (from = null, to = null) => {
     try {
+      to = to || Date.now();
+      from = from || to - 365 * 24 * 60 * 60 * 1000; // Default to 1 year if not provided
+
+      console.log(`Fetching historic portfolio data from ${new Date(from)} to ${new Date(to)}...`);
+
       const response = await axios.get(`https://api.mobula.io/api/1/wallet/history`, {
         params: {
-          wallets: walletAddress
+          wallets: walletAddress,
+          from: from,
+          to: to
         },
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setData(prevData => ({ ...prevData, historicPortfolioData: response.data }));
+
+      if (response.data) {
+        setHistoricPortfolioData(response.data);
+        console.log('Historic portfolio data updated successfully.');
+      } else {
+        console.error('Invalid historic portfolio data structure:', response.data);
+        throw new Error('Invalid historic portfolio data structure');
+      }
     } catch (error) {
       console.error('Error fetching historic portfolio data:', error);
-      setErrorSnackbar({ open: true, message: 'Failed to fetch historic portfolio data' });
+      console.error('Error details:', error.response?.data || error.message);
+      setErrorSnackbar({ 
+        open: true, 
+        message: `Failed to fetch historic portfolio data: ${error.message}`
+      });
     }
   };
 
   const fetchWalletPortfolio = async () => {
+    setIsWalletPortfolioLoading(true);
     try {
+      console.log('Fetching wallet portfolio for address:', walletAddress);
       const response = await axios.get(`https://api.mobula.io/api/1/wallet/multi-portfolio`, {
         params: {
           wallets: walletAddress
@@ -340,11 +533,30 @@ function ChatInterface() {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
-      setData(prevData => ({ ...prevData, walletPortfolio: response.data }));
+      
+      console.log('Wallet portfolio response:', response.data);
+      
+      if (response.data && response.data.data && response.data.data[0]) {
+        const portfolioData = response.data.data[0];
+        
+        setTotalWalletBalance(portfolioData.total_wallet_balance);
+        setWalletAddresses(portfolioData.wallets);
+        setTotalRealizedPNL(portfolioData.total_realized_pnl);
+        setTotalUnrealizedPNL(portfolioData.total_unrealized_pnl);
+        setAssets(portfolioData.assets);
+        setTotalPNLHistory(portfolioData.total_pnl_history);
+        
+        setData(prevData => ({ ...prevData, walletPortfolio: response.data }));
+      } else {
+        console.error('Invalid wallet portfolio data structure:', response.data);
+        setErrorSnackbar({ open: true, message: 'Invalid wallet portfolio data structure' });
+      }
     } catch (error) {
       console.error('Error fetching wallet portfolio:', error);
-      setErrorSnackbar({ open: true, message: 'Failed to fetch wallet portfolio' });
+      console.error('Error details:', error.response?.data || error.message);
+      setErrorSnackbar({ open: true, message: `Failed to fetch wallet portfolio: ${error.message}` });
     }
+    setIsWalletPortfolioLoading(false);
   };
 
   // Function to get data based on the key
@@ -355,28 +567,17 @@ function ChatInterface() {
   const callOpenAIAPI = async (userInput) => {
     try {
       const response = await openai.chat.completions.create({
-        model: "ft:gpt-4o-mini-2024-07-18:xade-ai::AEfTPsbe",
+        model: "gpt-4o-mini",
         messages: [
           { 
             role: "system", 
-            content: `You are Xade AI, a trading assistant with access to real-time financial data and wallet information. You have access to the following data:
+            content: `You are a helpful assistant for a cryptocurrency analysis platform. When the user asks about a specific token or coin, use the provided functions to fetch and return relevant data. For price-related queries, use the price() function. For other market data, use getMarketData(). For metadata like website or social media links, use getMetadata(). Always wrap your code in a JavaScript code block and use a function to return the result. For example:
 
-1. priceHistoryData: An array of objects containing historical price data for the selected coin. Each object has 'date' and 'price' properties.
-2. cryptoPanicNews: An array of news items related to the selected coin. Each item has 'title' and 'url' properties.
-3. marketData: An object containing current market data for the selected coin, including price, market cap, volume, etc.
-4. metadata: An object containing metadata about the selected coin, such as description, website, social media links, etc.
-5. historicPortfolioData: An object containing historical portfolio data for the user's wallet.
-6. walletPortfolio: An object containing current portfolio data for the user's wallet.
-7. selectedCoin: An object containing information about the currently selected coin, including 'name' and 'symbol' properties.
+\`\`\`javascript
+return price(selectedCoin);
+\`\`\`
 
-To answer the user's query, you should generate JavaScript code that accesses and processes this data as needed. The code you generate will be executed by our system to provide the answer. Please format your response as follows:
-
-1. Include the JavaScript code within a code block, starting with \\\javascript and ending with \\\.
-2. The last line of your code should return the processed data.
-3. Don't show any comments.
-4. Always use optional chaining (?.) when accessing object properties.
-
-Your response will be executed, and the result will be appended to your message.`
+Replace 'bitcoin' with the name of the token the user is asking about. Choose the appropriate function based on the user's request. If the user doesn't specify a token, ask for clarification.`
           },
           { 
             role: "user", 
@@ -417,10 +618,10 @@ Your response will be executed, and the result will be appended to your message.
     try {
       // Fetch all data before calling the AI
       await Promise.all([
-        fetchPriceHistory(),
-        fetchCryptoPanicData(),
-        fetchMarketData(),
-        fetchMetadata(),
+        fetchPriceHistory(selectedCoin),
+        fetchCryptoPanicData(selectedCoin),
+        fetchMarketData(selectedCoin), // Make sure selectedCoin is defined
+        fetchMetadata(selectedCoin),
         fetchHistoricPortfolioData(),
         fetchWalletPortfolio()
       ]);
@@ -453,18 +654,45 @@ Your response will be executed, and the result will be appended to your message.
   // Function to execute the code generated by GPT
   const executeCode = async (code) => {
     try {
-      // Create a function from the code string
-      const func = new Function('data', 'selectedCoin', `
-        const { priceHistoryData, cryptoPanicNews, marketData, metadata, historicPortfolioData, walletPortfolio } = data;
-        ${code}
-      `);
+      // Wrap the code in a function if it's not already
+      const wrappedCode = code.includes('function') ? code : `function executeAICode() {\n${code}\n}\nexecuteAICode();`;
       
-      // Execute the function with the current data and selectedCoin
-      console.log('Executing code:', code);
-      console.log('Data passed to function:', data);
-      console.log('Selected coin:', selectedCoin);
-      const result = await func(data, selectedCoin);
-      console.log('Execution result:', result);
+      const func = new Function(
+        'data', 'selectedCoin', 'setSelectedCoin', 'getMarketData', 'getMetadata',
+        'price', 'volume', 'marketCap', 'website', 'twitter', 'telegram', 'discord', 'description',
+        `
+          const { priceHistoryData, cryptoPanicNews, historicPortfolioData, walletPortfolio } = data;
+          
+          // Helper function to check if data is loaded
+          const isLoaded = (value) => value !== 'N/A' && value !== undefined && value !== null;
+
+          // Wrap each function to handle loading state
+          const wrappedFunctions = {
+            price: (token) => isLoaded(price(token)) ? price(token) : 'Loading...',
+            volume: (token) => isLoaded(volume(token)) ? volume(token) : 'Loading...',
+            marketCap: (token) => isLoaded(marketCap(token)) ? marketCap(token) : 'Loading...',
+            website: (token) => isLoaded(website(token)) ? website(token) : 'Loading...',
+            twitter: (token) => isLoaded(twitter(token)) ? twitter(token) : 'Loading...',
+            telegram: (token) => isLoaded(telegram(token)) ? telegram(token) : 'Loading...',
+            discord: (token) => isLoaded(discord(token)) ? discord(token) : 'Loading...',
+            description: (token) => isLoaded(description(token)) ? description(token) : 'Loading...',
+          };
+
+          // Replace original functions with wrapped versions in the code
+          const finalCode = \`${wrappedCode}\`.replace(
+            /(price|volume|marketCap|website|twitter|telegram|discord|description)\\(/g,
+            'wrappedFunctions.$1('
+          );
+
+          // Execute the wrapped code
+          return eval(finalCode);
+        `
+      );
+      
+      const result = await func(
+        data, selectedCoin, setSelectedCoin, getMarketData, getMetadata,
+        price, volume, marketCap, website, twitter, telegram, discord, description
+      );
       
       if (result === undefined) {
         throw new Error('Execution result is undefined. Make sure the code returns a value.');
@@ -500,7 +728,13 @@ Your response will be executed, and the result will be appended to your message.
           ...styles.bubble,
           ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble)
         }}>
-          <div dangerouslySetInnerHTML={{ __html: content }} />
+          {executionResult ? (
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {executionResult}
+            </pre>
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: content }} />
+          )}
           {message.role === 'user' && index === messages.length - 2 && (
             <div style={styles.tokenCount}>Input Tokens: {inputTokens}</div>
           )}
@@ -508,16 +742,6 @@ Your response will be executed, and the result will be appended to your message.
             <Typography variant="caption" style={{ marginTop: '5px', color: '#888' }}>
               Response time: {responseTime}ms
             </Typography>
-          )}
-          {executionResult && (
-            <div style={{ marginTop: '10px', padding: '10px', backgroundColor: '#2a2a2a', borderRadius: '5px' }}>
-              <Typography variant="subtitle2" style={{ color: '#50e3c2', marginBottom: '5px' }}>
-                Execution Result:
-              </Typography>
-              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                {executionResult}
-              </pre>
-            </div>
           )}
         </div>
       </div>
@@ -530,6 +754,10 @@ Your response will be executed, and the result will be appended to your message.
   };
 
   const handleWalletAddressChange = () => {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(newWalletAddress)) {
+      setErrorSnackbar({ open: true, message: 'Invalid Ethereum wallet address' });
+      return;
+    }
     setWalletAddress(newWalletAddress);
     setShowPopup(false);
     // Refetch data with new wallet address
@@ -550,6 +778,141 @@ Your response will be executed, and the result will be appended to your message.
     setErrorSnackbar({ ...errorSnackbar, open: false });
   };
 
+  // Modify these functions to return 'N/A' for loading state
+  const website = (token) => {
+    return getMetadata(token)?.website || 'N/A';
+  };
+  const twitter = (token) => {
+    return getMetadata(token)?.twitter || 'N/A';
+  };
+  const telegram = (token) => {
+    return getMetadata(token)?.telegram || 'N/A';
+  };
+  const discord = (token) => {
+    return getMetadata(token)?.discord || 'N/A';
+  };
+  const description = (token) => {
+    return getMetadata(token)?.description || 'N/A';
+  };
+  const price = (token) => {
+    const data = getMarketData(token);
+    return data?.price !== undefined ? `$${data.price.toFixed(2)}` : 'N/A';
+  };
+  const volume = (token) => {
+    const data = getMarketData(token);
+    return data?.volume !== undefined ? `$${data.volume.toFixed(2)}` : 'N/A';
+  };
+  const marketCap = (token) => {
+    const data = getMarketData(token);
+    return data?.market_cap !== undefined ? `$${data.market_cap.toFixed(2)}` : 'N/A';
+  };
+  const marketCapDiluted = (token) => {
+    return `$${getMarketData(token)?.market_cap_diluted?.toFixed(2) || 'N/A'}`;
+  };
+  const liquidity = (token) => {
+    return `$${getMarketData(token)?.liquidity?.toFixed(2) || 'N/A'}`;
+  };
+  const liquidityChange24h = (token) => {
+    return `${getMarketData(token)?.liquidity_change_24h?.toFixed(2) || 'N/A'}%`;
+  };
+  const offChainVolume = (token) => {
+    return `$${getMarketData(token)?.off_chain_volume?.toFixed(2) || 'N/A'}`;
+  };
+  const volume7d = (token) => {
+    return `$${getMarketData(token)?.volume_7d?.toFixed(2) || 'N/A'}`;
+  };
+  const volumeChange24h = (token) => {
+    return `${getMarketData(token)?.volume_change_24h?.toFixed(2) || 'N/A'}%`;
+  };
+  const isListed = (token) => {
+    return getMarketData(token)?.is_listed ? 'Yes' : 'No';
+  };
+  const priceChange24h = (token) => {
+    return `${getMarketData(token)?.price_change_24h?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange1h = (token) => {
+    return `${getMarketData(token)?.price_change_1h?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange7d = (token) => {
+    return `${getMarketData(token)?.price_change_7d?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange1m = (token) => {
+    return `${getMarketData(token)?.price_change_1m?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange1y = (token) => {
+    return `${getMarketData(token)?.price_change_1y?.toFixed(2) || 'N/A'}%`;
+  };
+  const ath = (token) => {
+    return `$${getMarketData(token)?.ath?.toFixed(2) || 'N/A'}`;
+  };
+  const atl = (token) => {
+    return `$${getMarketData(token)?.atl?.toFixed(2) || 'N/A'}`;
+  };
+  const rank = (token) => {
+    return getMarketData(token)?.rank || 'N/A';
+  };
+  const totalSupply = (token) => {
+    return getMarketData(token)?.total_supply || 'N/A';
+  };
+  const circulatingSupply = (token) => {
+    return getMarketData(token)?.circulating_supply || 'N/A';
+  };
+  const renderWalletPortfolio = () => {
+    if (isWalletPortfolioLoading) {
+      return <p>Loading wallet portfolio data...</p>;
+    }
+    
+    if (!getData('walletPortfolio')) {
+      return <p>No wallet portfolio data available.</p>;
+    }
+    
+    return (
+      <div style={styles.walletPortfolioContainer}>
+        <h3>Wallet Portfolio</h3>
+        <p>Total Balance: ${totalWalletBalance.toFixed(2)}</p>
+        <p>Total Realized PNL: ${totalRealizedPNL.toFixed(2)}</p>
+        <p>Total Unrealized PNL: ${totalUnrealizedPNL.toFixed(2)}</p>
+        <h4>Assets:</h4>
+        <ul>
+          {assets.map((asset, index) => (
+            <li key={index}>
+              {asset.asset.name} ({asset.asset.symbol}): 
+              Balance: {asset.token_balance.toFixed(6)}, 
+              Value: ${asset.estimated_balance.toFixed(2)}
+            </li>
+          ))}
+        </ul>
+        <h4>PNL History:</h4>
+        <ul>
+          <li>24h: Realized: ${totalPNLHistory['24h'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['24h'].unrealized.toFixed(2)}</li>
+          <li>7d: Realized: ${totalPNLHistory['7d'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['7d'].unrealized.toFixed(2)}</li>
+          <li>30d: Realized: ${totalPNLHistory['30d'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['30d'].unrealized.toFixed(2)}</li>
+          <li>1y: Realized: ${totalPNLHistory['1y'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['1y'].unrealized.toFixed(2)}</li>
+        </ul>
+      </div>
+    );
+  };
+  const renderCryptoPanicNews = (coinname) => {
+    const newsItems = data.cryptoPanicNews?.[coinname];
+    
+    if (!newsItems || newsItems.length === 0) {
+      return <Typography>No news available for {coinname}</Typography>;
+    }
+
+    return (
+      <div>
+        <Typography variant="h6">Latest News for {coinname}</Typography>
+        {newsItems.map((item, index) => (
+          <Typography key={index}>
+            <Link href={item.url} target="_blank" rel="noopener noreferrer">
+              {item.title}
+            </Link>
+          </Typography>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div style={styles.chatInterface}>
       <div style={{
@@ -565,11 +928,11 @@ Your response will be executed, and the result will be appended to your message.
           <ThemeProvider theme={darkTheme}>
             <div className="coin-selector">
               <Select
-                value={selectedCoin.symbol}
-                onChange={(e) => setSelectedCoin(coins.find(coin => coin.symbol === e.target.value))}
+                value={selectedToken.symbol}
+                onChange={(e) => setSelectedToken(coins.find(coin => coin.symbol === e.target.value))}
                 renderValue={(selected) => (
                   <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>
-                    <img src={selectedCoin.logo} alt={selectedCoin.name} style={{ width: 20, marginRight: 8 }} />
+                    <img src={selectedToken.logo} alt={selectedToken.symbol} style={{ width: 20, marginRight: 8 }} />
                     {selected}
                   </div>
                 )}
@@ -613,11 +976,19 @@ Your response will be executed, and the result will be appended to your message.
             </div>
           </ThemeProvider>
           <div style={{ color: 'white' }}>
-            ${data.marketData?.price?.toFixed(2) || 'N/A'}
+            {price('polygon')}
           </div>
-          {/* Simplified website display */}
+          <div style={{ color: 'white' }}>
+            Solana: {price('ethereum')}
+          </div>
+          <div style={{ color: 'white' }}>
+            Solana: {marketCap('ethereum')}
+          </div>
           <div style={{ color: 'white', fontSize: '14px' }}>
-            {data.metadata?.data?.website}
+            Website: {website('ethereum')}
+          </div>
+          <div style={{ color: 'white', fontSize: '14px' }}>
+            Twitter: {twitter(selectedCoin)}
           </div>
           <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
             {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
@@ -628,6 +999,7 @@ Your response will be executed, and the result will be appended to your message.
         <div style={styles.messageList} ref={messageListRef}>
           {messages.map((message, index) => renderMessage(message, index))}
         </div>
+
       </div>
       <form onSubmit={handleSubmit} style={styles.inputForm}>
         <input
