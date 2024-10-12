@@ -429,12 +429,11 @@ function ChatInterface() {
   };
 
   // Function to get market data for a specific coin
-  const getMarketData = (coinname) => {
-    if (!marketData[coinname]) {
-      fetchMarketData(coinname);
-      return null;
+  const getMarketData = async (token) => {
+    if (!marketData[token]) {
+      await fetchMarketData(token);
     }
-    return marketData[coinname];
+    return marketData[token] || null;
   };
 
   const fetchMetadata = async (coinname) => {
@@ -478,12 +477,11 @@ function ChatInterface() {
   };
 
   // Add a function to get metadata for a specific coin
-  const getMetadata = (coinname) => {
-    if (!metadata[coinname]) {
-      fetchMetadata(coinname);
-      return null;
+  const getMetadata = async (token) => {
+    if (!metadata[token]) {
+      await fetchMetadata(token);
     }
-    return metadata[coinname];
+    return metadata[token] || null;
   };
 
   const fetchHistoricPortfolioData = async (from = null, to = null) => {
@@ -570,14 +568,62 @@ function ChatInterface() {
         model: "gpt-4o-mini",
         messages: [
           { 
-            role: "system", 
-            content: `You are a helpful assistant for a cryptocurrency analysis platform. When the user asks about a specific token or coin, use the provided functions to fetch and return relevant data. For price-related queries, use the price() function. For other market data, use getMarketData(). For metadata like website or social media links, use getMetadata(). Always wrap your code in a JavaScript code block and use a function to return the result. For example:
+            role: "system",
+            content: `You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Before performing any operations, always set the selected coin using setSelectedCoin(coinName). The coinName should be lowercase.
 
-\`\`\`javascript
-return price(selectedCoin);
-\`\`\`
+You have access to the following data where token is the coin name:
 
-Replace 'bitcoin' with the name of the token the user is asking about. Choose the appropriate function based on the user's request. If the user doesn't specify a token, ask for clarification.`
+price(token)
+volume(token)
+marketCap(token)
+marketCapDiluted(token)
+liquidity(token)
+liquidityChange24h(token)
+offChainVolume(token)
+volume7d(token)
+volumeChange24h(token)
+isListed(token)
+priceChange24h(token)
+priceChange1h(token)
+priceChange7d(token)
+priceChange1m(token)
+priceChange1y(token)
+ath(token)
+atl(token)
+rank(token)
+totalSupply(token)
+circulatingSupply(token)
+
+website(token)
+twitter(token)
+telegram(token)
+discord(token)
+description(token)  
+
+priceHistoryData(token)
+
+
+totalWalletBalance
+totalRealizedPNL
+totalUnrealizedPNL
+assets
+totalPNLHistory(24h)
+totalPNLHistory(7d)
+totalPNLHistory(30d)
+totalPNLHistory(1y)
+
+
+renderCryptoPanicNews(token)
+
+
+historicPortfolioData()
+
+To answer the user's query, you should generate JavaScript code that accesses and processes this data as needed. The code you generate will be executed by our system to provide the answer. Please format your response as follows:
+1. Include the JavaScript code within a code block, starting with \`\`\`javascript and ending with \`\`\`.
+2. The last line of your code should return the processed data.
+3. Don't show any comments.
+4. Always use optional chaining (?.) when accessing object properties.
+6. Always start your code by setting the selected coin using setSelectedCoin(coinName).`
           },
           { 
             role: "user", 
@@ -616,27 +662,41 @@ Replace 'bitcoin' with the name of the token the user is asking about. Choose th
     setInput('');
 
     try {
-      // Fetch all data before calling the AI
-      await Promise.all([
-        fetchPriceHistory(selectedCoin),
-        fetchCryptoPanicData(selectedCoin),
-        fetchMarketData(selectedCoin), // Make sure selectedCoin is defined
-        fetchMetadata(selectedCoin),
-        fetchHistoricPortfolioData(),
-        fetchWalletPortfolio()
-      ]);
-
       const aiResponse = await callOpenAIAPI(input);
       
-      // Extract code from AI response
       const codeMatch = aiResponse.match(/```javascript\n([\s\S]*?)\n```/);
       if (codeMatch && codeMatch[1]) {
         const code = codeMatch[1];
-        // Execute the code
-        const result = await executeCode(code);
-        // Append the result to the AI response
-        const fullResponse = `${aiResponse}\n\n**Execution Result:**\n\`\`\`\n${JSON.stringify(result, null, 2)}\n\`\`\``;
-        setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+        const executionStartTime = Date.now();
+        let result;
+        const maxExecutionTime = 30000; // 30 seconds
+
+        const executionPromise = new Promise(async (resolve) => {
+          result = await executeCode(codeMatch[1]);
+          resolve();
+        });
+
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Execution timed out')), maxExecutionTime);
+        });
+
+        await Promise.race([executionPromise, timeoutPromise]);
+
+        const executionTime = Date.now() - executionStartTime;
+
+        // If the result is not "Loading...", show it immediately
+        if (result && !result.toString().includes('Loading...')) {
+          const fullResponse = `${aiResponse}\n\n**Execution Result:**\n\`\`\`\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+          setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+        } else {
+          // Wait for the remaining time if it's less than 30 seconds
+          const remainingTime = maxExecutionTime - executionTime;
+          if (remainingTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, remainingTime));
+          }
+          const fullResponse = `${aiResponse}\n\n**Execution Result:**\n\`\`\`\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+          setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+        }
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
       }
@@ -654,44 +714,69 @@ Replace 'bitcoin' with the name of the token the user is asking about. Choose th
   // Function to execute the code generated by GPT
   const executeCode = async (code) => {
     try {
-      // Wrap the code in a function if it's not already
-      const wrappedCode = code.includes('function') ? code : `function executeAICode() {\n${code}\n}\nexecuteAICode();`;
+      const wrappedCode = code.includes('function') ? code : `async function executeAICode() {\n${code}\n}\nexecuteAICode();`;
       
       const func = new Function(
         'data', 'selectedCoin', 'setSelectedCoin', 'getMarketData', 'getMetadata',
         'price', 'volume', 'marketCap', 'website', 'twitter', 'telegram', 'discord', 'description',
+        'totalWalletBalance', 'totalRealizedPNL', 'totalUnrealizedPNL', 'assets', 'totalPNLHistory',
+        'renderCryptoPanicNews', 'historicPortfolioData',
         `
-          const { priceHistoryData, cryptoPanicNews, historicPortfolioData, walletPortfolio } = data;
+          const { priceHistoryData, cryptoPanicNews, historicPortfolioData: historicData, walletPortfolio } = data;
           
-          // Helper function to check if data is loaded
           const isLoaded = (value) => value !== 'N/A' && value !== undefined && value !== null;
 
-          // Wrap each function to handle loading state
           const wrappedFunctions = {
-            price: (token) => isLoaded(price(token)) ? price(token) : 'Loading...',
-            volume: (token) => isLoaded(volume(token)) ? volume(token) : 'Loading...',
-            marketCap: (token) => isLoaded(marketCap(token)) ? marketCap(token) : 'Loading...',
-            website: (token) => isLoaded(website(token)) ? website(token) : 'Loading...',
-            twitter: (token) => isLoaded(twitter(token)) ? twitter(token) : 'Loading...',
-            telegram: (token) => isLoaded(telegram(token)) ? telegram(token) : 'Loading...',
-            discord: (token) => isLoaded(discord(token)) ? discord(token) : 'Loading...',
-            description: (token) => isLoaded(description(token)) ? description(token) : 'Loading...',
+            price: async (token) => {
+              const result = await price(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            volume: async (token) => {
+              const result = await volume(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            marketCap: async (token) => {
+              const result = await marketCap(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            website: async (token) => {
+              const result = await website(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            twitter: async (token) => {
+              const result = await twitter(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            telegram: async (token) => {
+              const result = await telegram(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            discord: async (token) => {
+              const result = await discord(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            description: async (token) => {
+              const result = await description(token);
+              return isLoaded(result) ? result : 'Loading...';
+            },
+            priceHistoryData: async (token) => priceHistoryData?.[token] || 'Loading...',
+            renderCryptoPanicNews: async (token) => renderCryptoPanicNews(token) || 'Loading...',
           };
 
-          // Replace original functions with wrapped versions in the code
           const finalCode = \`${wrappedCode}\`.replace(
-            /(price|volume|marketCap|website|twitter|telegram|discord|description)\\(/g,
-            'wrappedFunctions.$1('
+            /(price|volume|marketCap|website|twitter|telegram|discord|description|priceHistoryData|renderCryptoPanicNews)\\(/g,
+            'await wrappedFunctions.$1('
           );
 
-          // Execute the wrapped code
           return eval(finalCode);
         `
       );
       
       const result = await func(
         data, selectedCoin, setSelectedCoin, getMarketData, getMetadata,
-        price, volume, marketCap, website, twitter, telegram, discord, description
+        price, volume, marketCap, website, twitter, telegram, discord, description,
+        totalWalletBalance, totalRealizedPNL, totalUnrealizedPNL, assets, totalPNLHistory,
+        renderCryptoPanicNews, historicPortfolioData
       );
       
       if (result === undefined) {
@@ -778,84 +863,107 @@ Replace 'bitcoin' with the name of the token the user is asking about. Choose th
     setErrorSnackbar({ ...errorSnackbar, open: false });
   };
 
-  // Modify these functions to return 'N/A' for loading state
-  const website = (token) => {
-    return getMetadata(token)?.website || 'N/A';
+  // Modify these functions to return Promises
+  const website = async (token) => {
+    const metadata = await getMetadata(token);
+    return metadata?.website || 'N/A';
   };
-  const twitter = (token) => {
-    return getMetadata(token)?.twitter || 'N/A';
+  const twitter = async (token) => {
+    const metadata = await getMetadata(token);
+    return metadata?.twitter || 'N/A';
   };
-  const telegram = (token) => {
-    return getMetadata(token)?.telegram || 'N/A';
+  const telegram = async (token) => {
+    const metadata = await getMetadata(token);
+    return metadata?.telegram || 'N/A';
   };
-  const discord = (token) => {
-    return getMetadata(token)?.discord || 'N/A';
+  const discord = async (token) => {
+    const metadata = await getMetadata(token);
+    return metadata?.discord || 'N/A';
   };
-  const description = (token) => {
-    return getMetadata(token)?.description || 'N/A';
+  const description = async (token) => {
+    const metadata = await getMetadata(token);
+    return metadata?.description || 'N/A';
   };
-  const price = (token) => {
-    const data = getMarketData(token);
-    return data?.price !== undefined ? `$${data.price.toFixed(2)}` : 'N/A';
+  const price = async (token) => {
+    const data = await getMarketData(token);
+    if (!data) return 'Loading...';
+    return data.price !== undefined ? `$${data.price.toFixed(2)}` : 'N/A';
   };
-  const volume = (token) => {
-    const data = getMarketData(token);
+  const volume = async (token) => {
+    const data = await getMarketData(token);
     return data?.volume !== undefined ? `$${data.volume.toFixed(2)}` : 'N/A';
   };
-  const marketCap = (token) => {
-    const data = getMarketData(token);
+  const marketCap = async (token) => {
+    const data = await getMarketData(token);
     return data?.market_cap !== undefined ? `$${data.market_cap.toFixed(2)}` : 'N/A';
   };
-  const marketCapDiluted = (token) => {
-    return `$${getMarketData(token)?.market_cap_diluted?.toFixed(2) || 'N/A'}`;
+  const marketCapDiluted = async (token) => {
+    const data = await getMarketData(token);
+    return `$${data?.market_cap_diluted?.toFixed(2) || 'N/A'}`;
   };
-  const liquidity = (token) => {
-    return `$${getMarketData(token)?.liquidity?.toFixed(2) || 'N/A'}`;
+  const liquidity = async (token) => {
+    const data = await getMarketData(token);
+    return `$${data?.liquidity?.toFixed(2) || 'N/A'}`;
   };
-  const liquidityChange24h = (token) => {
-    return `${getMarketData(token)?.liquidity_change_24h?.toFixed(2) || 'N/A'}%`;
+  const liquidityChange24h = async (token) => {
+    const data = await getMarketData(token);
+    return `${data?.liquidity_change_24h?.toFixed(2) || 'N/A'}%`;
   };
-  const offChainVolume = (token) => {
-    return `$${getMarketData(token)?.off_chain_volume?.toFixed(2) || 'N/A'}`;
+  const offChainVolume = async (token) => {
+    const data = await getMarketData(token);
+    return `$${data?.off_chain_volume?.toFixed(2) || 'N/A'}`;
   };
-  const volume7d = (token) => {
-    return `$${getMarketData(token)?.volume_7d?.toFixed(2) || 'N/A'}`;
+  const volume7d = async (token) => {
+    const data = await getMarketData(token);
+    return `$${data?.volume_7d?.toFixed(2) || 'N/A'}`;
   };
-  const volumeChange24h = (token) => {
-    return `${getMarketData(token)?.volume_change_24h?.toFixed(2) || 'N/A'}%`;
+  const volumeChange24h = async (token) => {
+    const data = await getMarketData(token);
+    return `${data?.volume_change_24h?.toFixed(2) || 'N/A'}%`;
   };
-  const isListed = (token) => {
-    return getMarketData(token)?.is_listed ? 'Yes' : 'No';
+  const isListed = async (token) => {
+    const data = await getMarketData(token);
+    return data?.is_listed ? 'Yes' : 'No';
   };
-  const priceChange24h = (token) => {
-    return `${getMarketData(token)?.price_change_24h?.toFixed(2) || 'N/A'}%`;
+  const priceChange24h = async (token) => {
+    const data = await getMarketData(token);
+    return `${data?.price_change_24h?.toFixed(2) || 'N/A'}%`;
   };
-  const priceChange1h = (token) => {
-    return `${getMarketData(token)?.price_change_1h?.toFixed(2) || 'N/A'}%`;
+  const priceChange1h = async (token) => {
+    const data = await getMarketData(token);
+    return `${data?.price_change_1h?.toFixed(2) || 'N/A'}%`;
   };
-  const priceChange7d = (token) => {
-    return `${getMarketData(token)?.price_change_7d?.toFixed(2) || 'N/A'}%`;
+  const priceChange7d = async (token) => {
+    const data = await getMarketData(token);
+    return `${data?.price_change_7d?.toFixed(2) || 'N/A'}%`;
   };
-  const priceChange1m = (token) => {
-    return `${getMarketData(token)?.price_change_1m?.toFixed(2) || 'N/A'}%`;
+  const priceChange1m = async (token) => {
+    const data = await getMarketData(token);
+    return `${data?.price_change_1m?.toFixed(2) || 'N/A'}%`;
   };
-  const priceChange1y = (token) => {
-    return `${getMarketData(token)?.price_change_1y?.toFixed(2) || 'N/A'}%`;
+  const priceChange1y = async (token) => {
+    const data = await getMarketData(token);
+    return `${data?.price_change_1y?.toFixed(2) || 'N/A'}%`;
   };
-  const ath = (token) => {
-    return `$${getMarketData(token)?.ath?.toFixed(2) || 'N/A'}`;
+  const ath = async (token) => {
+    const data = await getMarketData(token);
+    return `$${data?.ath?.toFixed(2) || 'N/A'}`;
   };
-  const atl = (token) => {
-    return `$${getMarketData(token)?.atl?.toFixed(2) || 'N/A'}`;
+  const atl = async (token) => {
+    const data = await getMarketData(token);
+    return `$${data?.atl?.toFixed(2) || 'N/A'}`;
   };
-  const rank = (token) => {
-    return getMarketData(token)?.rank || 'N/A';
+  const rank = async (token) => {
+    const data = await getMarketData(token);
+    return data?.rank || 'N/A';
   };
-  const totalSupply = (token) => {
-    return getMarketData(token)?.total_supply || 'N/A';
+  const totalSupply = async (token) => {
+    const data = await getMarketData(token);
+    return data?.total_supply || 'N/A';
   };
-  const circulatingSupply = (token) => {
-    return getMarketData(token)?.circulating_supply || 'N/A';
+  const circulatingSupply = async (token) => {
+    const data = await getMarketData(token);
+    return data?.circulating_supply || 'N/A';
   };
   const renderWalletPortfolio = () => {
     if (isWalletPortfolioLoading) {
@@ -975,21 +1083,7 @@ Replace 'bitcoin' with the name of the token the user is asking about. Choose th
               </Select>
             </div>
           </ThemeProvider>
-          <div style={{ color: 'white' }}>
-            {price('polygon')}
-          </div>
-          <div style={{ color: 'white' }}>
-            Solana: {price('ethereum')}
-          </div>
-          <div style={{ color: 'white' }}>
-            Solana: {marketCap('ethereum')}
-          </div>
-          <div style={{ color: 'white', fontSize: '14px' }}>
-            Website: {website('ethereum')}
-          </div>
-          <div style={{ color: 'white', fontSize: '14px' }}>
-            Twitter: {twitter(selectedCoin)}
-          </div>
+         
           <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
             {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
           </div>
