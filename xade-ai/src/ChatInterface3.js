@@ -5,10 +5,6 @@ import { coins } from './coins';
 import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider, Alert, Snackbar, Typography, Paper, Link } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';     
 import { createContext, useContext } from 'react';
-import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 
 // Create a context for storing fetched data
 const DataContext = createContext(null);
@@ -59,16 +55,8 @@ const styles = {
     borderRadius: '10px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
     zIndex: 1000,
-    width: '400px', // Increase width to accommodate icons
-  },
-  walletAddressItem: {
-    display: 'flex',
-    alignItems: 'center',
-    marginBottom: '10px',
   },
   popupInput: {
-    flex: 1,
-    marginRight: '10px',
     width: '100%',
     padding: '10px',
     marginBottom: '10px',
@@ -76,14 +64,6 @@ const styles = {
     color: '#e5e5e5',
     border: 'none',
     borderRadius: '5px',
-  },
-  addIcon: {
-    cursor: 'pointer',
-    color: '#4a90e2',
-  },
-  deleteIcon: {
-    cursor: 'pointer',
-    color: '#e74c3c',
   },
   popupButton: {
     padding: '10px 20px',
@@ -152,7 +132,7 @@ const styles = {
   inputForm: {
     display: 'flex',
     padding: '15px 20px',
-    backgroundColor: 'transparent',
+    backgroundColor: '#1a1a1a',
   },
   input: {
     flexGrow: 1,
@@ -212,27 +192,6 @@ const styles = {
     margin: '20px 0',
     color: '#e5e5e5',
   },
-  announcementBar: {
-    backgroundColor: 'white',
-    color: 'black',
-    padding: '10px 20px',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    fontFamily: 'SK-Modernist-Regular, sans-serif',
-    fontSize: '14px',
-    position: 'relative', // Add this
-  },
-  announcementText: {
-    flex: 1,
-    textAlign: 'center',
-  },
-  closeButton: {
-    cursor: 'pointer',
-    color: 'black',
-    position: 'absolute', // Add this
-    right: '10px', // Add this
-  },
 };
 
 const openai = new OpenAI({
@@ -251,16 +210,14 @@ function ChatInterface() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [walletAddresses, setWalletAddresses] = useState(['0x7e3bbf75aba09833f899bb1fdd917fc3a5617555']);
-  const [newWalletAddress, setNewWalletAddress] = useState('');
+  const [walletAddress, setWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
   const [showPopup, setShowPopup] = useState(false);
+  const [newWalletAddress, setNewWalletAddress] = useState('0xba8Cc1690b3749c17aB2954E1ce8Cf42A3DA4519');
   const [selectedToken, setSelectedToken] = useState(coins[0]);
   const [selectedCoin, setSelectedCoin] = useState('bitcoin');
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCoins, setFilteredCoins] = useState(coins);
   const [inputTokens, setInputTokens] = useState(0);
-  const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
-  const [showAnnouncement, setShowAnnouncement] = useState(true);
 
   // Create a data object to store all fetched data
   const [data, setData] = useState({
@@ -270,14 +227,7 @@ function ChatInterface() {
     historicPortfolioData: null,
     walletPortfolio: null,
   });
-  useEffect(() => {
-    fetchPriceHistory(selectedCoin);
-    fetchCryptoPanicData(selectedCoin);
-    fetchMarketData(selectedCoin);
-    fetchMetadata(selectedCoin);
-    fetchHistoricPortfolioData();
-    fetchWalletPortfolio();
-  }, [selectedCoin, walletAddresses]);
+
   // Add a new state for error snackbar
   const [errorSnackbar, setErrorSnackbar] = useState({ open: false, message: '' });
 
@@ -289,6 +239,7 @@ function ChatInterface() {
   const [marketData, setMarketData] = useState({});
   const [metadata, setMetadata] = useState({});
   const [totalWalletBalance, setTotalWalletBalance] = useState(0);
+  const [walletAddresses, setWalletAddresses] = useState([]);
   const [totalRealizedPNL, setTotalRealizedPNL] = useState(0);
   const [totalUnrealizedPNL, setTotalUnrealizedPNL] = useState(0);
   const [assets, setAssets] = useState([]);
@@ -302,8 +253,6 @@ function ChatInterface() {
   const [historicPortfolioData, setHistoricPortfolioData] = useState(null);
   const [priceHistoryData, setPriceHistoryData] = useState({});
 
-  const [isWalletDataLoading, setIsWalletDataLoading] = useState(false);
-
   // Add this constant after the existing state declarations
   const priceHistory = Object.entries(priceHistoryData).map(([coinName, data]) => ({
     coinName,
@@ -315,43 +264,20 @@ function ChatInterface() {
     }))
   }));
 
-  const portfolioBalance = totalWalletBalance?.toFixed(2) ?? 'N/A';
-  const portfolioRealizedPNL = totalRealizedPNL?.toFixed(2) ?? 'N/A';
-  const portfolioUnrealizedPNL = totalUnrealizedPNL?.toFixed(2) ?? 'N/A';
-
-  const portfolioAssetsList = assets?.map(asset => ({
-    name: asset.asset?.name ?? 'Unknown',
-    symbol: asset.asset?.symbol ?? 'N/A',
-    balance: asset.token_balance?.toFixed(6) ?? 'N/A',
-    value: asset.estimated_balance?.toFixed(2) ?? 'N/A'
-  })) ?? [];
-
-  const portfolioPNLTimelines = {
-    '24h': {
-      realized: totalPNLHistory?.['24h']?.realized?.toFixed(2) ?? 'N/A',
-      unrealized: totalPNLHistory?.['24h']?.unrealized?.toFixed(2) ?? 'N/A'
-    },
-    '7d': {
-      realized: totalPNLHistory?.['7d']?.realized?.toFixed(2) ?? 'N/A',
-      unrealized: totalPNLHistory?.['7d']?.unrealized?.toFixed(2) ?? 'N/A'
-    },
-    '30d': {
-      realized: totalPNLHistory?.['30d']?.realized?.toFixed(2) ?? 'N/A',
-      unrealized: totalPNLHistory?.['30d']?.unrealized?.toFixed(2) ?? 'N/A'
-    },
-    '1y': {
-      realized: totalPNLHistory?.['1y']?.realized?.toFixed(2) ?? 'N/A',
-      unrealized: totalPNLHistory?.['1y']?.unrealized?.toFixed(2) ?? 'N/A'
-    }
-  };
-
   useEffect(() => {
     if (messageListRef.current) {
       messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
     }
   }, [messages]);
 
-
+  useEffect(() => {
+    fetchPriceHistory(selectedCoin);
+    fetchCryptoPanicData(selectedCoin);
+    fetchMarketData(selectedCoin);
+    fetchMetadata(selectedCoin);
+    fetchHistoricPortfolioData();
+    fetchWalletPortfolio();
+  }, [selectedCoin, walletAddress]);
 
   useEffect(() => {
     const filtered = coins.filter(
@@ -558,22 +484,19 @@ function ChatInterface() {
     return metadata[token] || null;
   };
 
-  const fetchHistoricPortfolioData = async (from = null, to = null, addresses = walletAddresses) => {
+  const fetchHistoricPortfolioData = async (from = null, to = null) => {
     try {
       to = to || Date.now();
       from = from || to - 365 * 24 * 60 * 60 * 1000; // Default to 1 year if not provided
 
-      const url = `https://api.mobula.io/api/1/wallet/history`;
-      const params = new URLSearchParams({
-        wallets: addresses.join(','),
-        from: from,
-        to: to
-      });
+      console.log(`Fetching historic portfolio data from ${new Date(from)} to ${new Date(to)}...`);
 
-      console.log(`Fetching historic portfolio data from: ${url}?${params.toString()}`);
-
-      const response = await axios.get(url, {
-        params: params,
+      const response = await axios.get(`https://api.mobula.io/api/1/wallet/history`, {
+        params: {
+          wallets: walletAddress,
+          from: from,
+          to: to
+        },
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
@@ -582,8 +505,8 @@ function ChatInterface() {
       if (response.data) {
         setHistoricPortfolioData(response.data);
         console.log('Historic portfolio data updated successfully.');
-        return response.data;  // Return the data
       } else {
+        console.error('Invalid historic portfolio data structure:', response.data);
         throw new Error('Invalid historic portfolio data structure');
       }
     } catch (error) {
@@ -593,22 +516,17 @@ function ChatInterface() {
         open: true, 
         message: `Failed to fetch historic portfolio data: ${error.message}`
       });
-      return null;  // Return null on error
     }
   };
 
-  const fetchWalletPortfolio = async (addresses = walletAddresses) => {
+  const fetchWalletPortfolio = async () => {
     setIsWalletPortfolioLoading(true);
     try {
-      const url = `https://api.mobula.io/api/1/wallet/multi-portfolio`;
-      const params = new URLSearchParams({
-        wallets: addresses.join(',')
-      });
-
-      console.log(`Fetching wallet portfolio from: ${url}?${params.toString()}`);
-
-      const response = await axios.get(url, {
-        params: params,
+      console.log('Fetching wallet portfolio for address:', walletAddress);
+      const response = await axios.get(`https://api.mobula.io/api/1/wallet/multi-portfolio`, {
+        params: {
+          wallets: walletAddress
+        },
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
@@ -626,22 +544,17 @@ function ChatInterface() {
         setAssets(portfolioData.assets);
         setTotalPNLHistory(portfolioData.total_pnl_history);
         
-        // Log the assets array
-        console.log('Assets:', portfolioData.assets);
-        
         setData(prevData => ({ ...prevData, walletPortfolio: response.data }));
-        return response.data;  // Return the data
       } else {
-        throw new Error('Invalid wallet portfolio data structure');
+        console.error('Invalid wallet portfolio data structure:', response.data);
+        setErrorSnackbar({ open: true, message: 'Invalid wallet portfolio data structure' });
       }
     } catch (error) {
       console.error('Error fetching wallet portfolio:', error);
       console.error('Error details:', error.response?.data || error.message);
       setErrorSnackbar({ open: true, message: `Failed to fetch wallet portfolio: ${error.message}` });
-      return null;  // Return null on error
-    } finally {
-      setIsWalletPortfolioLoading(false);
     }
+    setIsWalletPortfolioLoading(false);
   };
 
   // Function to get data based on the key
@@ -651,21 +564,12 @@ function ChatInterface() {
 
   const callOpenAIAPI = async (userInput) => {
     try {
-      // Prepare the portfolio data
-      const portfolioData = {
-        balance: portfolioBalance,
-        realizedPNL: portfolioRealizedPNL,
-        unrealizedPNL: portfolioUnrealizedPNL,
-        assetsList: portfolioAssetsList,
-        pnlTimelines: portfolioPNLTimelines
-      };
-
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { 
             role: "system",
-            content: `You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Before performing any operations, The coinName should be lowercase.
+            content: `You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Before performing any operations, always set the selected coin using setSelectedCoin(coinName). The coinName should be lowercase.
 
 You have access to the following data where token is the coin name:
 
@@ -698,30 +602,27 @@ description(token)
 
 priceHistoryData(token)
 
-You also have access to the following portfolio-related data:
 
-portfolioData?.balance: The total balance of the user's portfolio.
-portfolioData?.realizedPNL: The total realized Profit and Loss of the portfolio.
-portfolioData?.unrealizedPNL: The total unrealized Profit and Loss of the portfolio.
+totalWalletBalance
+totalRealizedPNL
+totalUnrealizedPNL
+assets
+totalPNLHistory(24h)
+totalPNLHistory(7d)
+totalPNLHistory(30d)
+totalPNLHistory(1y)
 
-portfolioData?.assetsList: An array of objects containing details about each asset in the portfolio. Each object has the following properties:
-  - name: The name of the asset
-  - symbol: The symbol of the asset
-  - balance: The balance of the asset
-  - value: The estimated value of the asset in USD
 
-portfolioData?.pnlTimelines: An object containing PNL data for different time periods. It has the following structure:
-  - '24h': { realized: [value], unrealized: [value] }
-  - '7d': { realized: [value], unrealized: [value] }
-  - '30d': { realized: [value], unrealized: [value] }
-  - '1y': { realized: [value], unrealized: [value] }
+renderCryptoPanicNews(token)
 
-To use this data in your responses, you should generate JavaScript code that accesses and processes this data as needed. The code you generate will be executed by our system to provide the answer. Please format your response as follows:
+
+historicPortfolioData()
+
+To answer the user's query, you should generate JavaScript code that accesses and processes this data as needed. The code you generate will be executed by our system to provide the answer. Please format your response as follows:
 1. Include the JavaScript code within a code block, starting with \`\`\`javascript and ending with \`\`\`.
 2. The last line of your code should return the processed data.
 3. Don't show any comments.
-4. Always use optional chaining (?.) when accessing object properties.
-5.Always return a value.`
+4. Always use optional chaining (?.) when accessing object properties.`
           },
           { 
             role: "user", 
@@ -746,6 +647,7 @@ To use this data in your responses, you should generate JavaScript code that acc
     }
   };
 
+  // Modify the handleSubmit function to track response time
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -756,64 +658,50 @@ To use this data in your responses, you should generate JavaScript code that acc
 
     const userMessage = { role: 'user', content: input };
     setMessages(prev => [...prev, userMessage]);
-    const userInput = input;
     setInput('');
 
-    console.log('User input:', userInput);
-
     try {
-      const initialAiResponse = await callOpenAIAPI(userInput);
-      console.log('Initial response from GPT-4o-mini:', initialAiResponse);
+      const aiResponse = await callOpenAIAPI(input);
+      
+      const codeMatch = aiResponse.match(/```javascript\n([\s\S]*?)\n```/);
+      if (codeMatch && codeMatch[1]) {
+        const code = codeMatch[1];
+        const executionStartTime = Date.now();
+        let result;
+        const maxExecutionTime = 3000; // 30 seconds
 
-      const processResponse = async (response) => {
-        const codeMatch = response.match(/```javascript\n([\s\S]*?)\n```/);
-        if (codeMatch && codeMatch[1]) {
-          const code = codeMatch[1];
-          const executionStartTime = Date.now();
-          let result;
-          const maxExecutionTime = 5000; // 5 seconds
+        const executionPromise = new Promise(async (resolve) => {
+          result = await executeCode(codeMatch[1]);
+          resolve();
+        });
 
-          const executionPromise = new Promise(async (resolve) => {
-            result = await executeCode(codeMatch[1]);
-            resolve();
-          });
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('Execution timed out')), maxExecutionTime);
+        });
 
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Execution timed out')), maxExecutionTime);
-          });
+        await Promise.race([executionPromise, timeoutPromise]);
 
-          await Promise.race([executionPromise, timeoutPromise]);
+        const executionTime = Date.now() - executionStartTime;
 
-          const executionTime = Date.now() - executionStartTime;
-
-          console.log('Execution result:', result);
-
-          // Make a direct call to OpenAI API without the system prompt
-          const finalResponse = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-              { role: "user", content: `As Degen AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result}` }
-            ],
-            temperature: 0.7,
-            max_tokens: 3000,
-            top_p: 1,
-            frequency_penalty: 0,
-            presence_penalty: 0,
-          });
-
-          console.log('Final response from GPT-4o-mini:', finalResponse.choices[0].message.content);
-
-          return finalResponse.choices[0].message.content;
+        // If the result is not "please resend the prompt", show it immediately
+        if (result && !result.toString().includes('please resend the prompt')) {
+          const fullResponse = `${aiResponse}\n\n**Execution Result:**\n\`\`\`\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+          setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
+        } else {
+          // Wait for the remaining time if it's less than 30 seconds
+          const remainingTime = maxExecutionTime - executionTime;
+          if (remainingTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, remainingTime));
+          }
+          const fullResponse = `${aiResponse}\n\n**Execution Result:**\n\`\`\`\n${JSON.stringify(result, null, 2)}\n\`\`\``;
+          setMessages(prev => [...prev, { role: 'assistant', content: fullResponse }]);
         }
-        return response;
-      };
-
-      const processedResponse = await processResponse(initialAiResponse);
-      setMessages(prev => [...prev, { role: 'assistant', content: processedResponse }]);
+      } else {
+        setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+      }
 
       const endTime = Date.now();
       setResponseTime(endTime - startTime);
-
     } catch (error) {
       setError(error.message);
       setErrorSnackbar({ open: true, message: error.message });
@@ -830,7 +718,8 @@ To use this data in your responses, you should generate JavaScript code that acc
       const func = new Function(
         'data', 'selectedCoin', 'setSelectedCoin', 'getMarketData', 'getMetadata',
         'price', 'volume', 'marketCap', 'website', 'twitter', 'telegram', 'discord', 'description',
-        'portfolioData', 'renderCryptoPanicNews', 'historicPortfolioData',
+        'totalWalletBalance', 'totalRealizedPNL', 'totalUnrealizedPNL', 'assets', 'totalPNLHistory',
+        'renderCryptoPanicNews', 'historicPortfolioData',
         `
           const { priceHistoryData, cryptoPanicNews, historicPortfolioData: historicData, walletPortfolio } = data;
           
@@ -885,13 +774,7 @@ To use this data in your responses, you should generate JavaScript code that acc
       const result = await func(
         data, selectedCoin, setSelectedCoin, getMarketData, getMetadata,
         price, volume, marketCap, website, twitter, telegram, discord, description,
-        {
-          balance: portfolioBalance,
-          realizedPNL: portfolioRealizedPNL,
-          unrealizedPNL: portfolioUnrealizedPNL,
-          assetsList: portfolioAssetsList,
-          pnlTimelines: portfolioPNLTimelines
-        },
+        totalWalletBalance, totalRealizedPNL, totalUnrealizedPNL, assets, totalPNLHistory,
         renderCryptoPanicNews, historicPortfolioData
       );
       
@@ -899,16 +782,11 @@ To use this data in your responses, you should generate JavaScript code that acc
         throw new Error('Execution result is undefined. Make sure the code returns a value.');
       }
       
-      // Remove extra quotes from string results
-      if (typeof result === 'string') {
-        return result.replace(/^"|"$/g, '' );
-      }
-      
-      return JSON.stringify(result, null, 2);
+      return result;
     } catch (error) {
       console.error('Error executing code:', error);
       return `Error: ${error.message}`;
-    }   
+    }
   };
 
   // Modify the renderMessage function to include response time
@@ -922,14 +800,6 @@ To use this data in your responses, you should generate JavaScript code that acc
     const executionResultMatch = content.match(/\*\*Execution Result:\*\*\n```\n([\s\S]*?)\n```/);
     const executionResult = executionResultMatch ? executionResultMatch[1] : null;
     
-    // Check if the execution result is "please resend the prompt"
-    if (executionResult === 'please resend the prompt') {
-      content = 'Please resend the prompt.';
-    } else if (executionResult && executionResult.startsWith('"') && executionResult.endsWith('"')) {
-      // Remove quotes from the execution result if it's a simple string
-      content = content.replace(executionResult, executionResult.slice(1, -1));
-    }
-    
     return (
       <div key={index} style={styles.message}>
         <div style={{
@@ -942,7 +812,13 @@ To use this data in your responses, you should generate JavaScript code that acc
           ...styles.bubble,
           ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble)
         }}>
-          <div dangerouslySetInnerHTML={{ __html: content }} />
+          {executionResult ? (
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+              {executionResult}
+            </pre>
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: content }} />
+          )}
           {message.role === 'user' && index === messages.length - 2 && (
             <div style={styles.tokenCount}>Input Tokens: {inputTokens}</div>
           )}
@@ -958,70 +834,19 @@ To use this data in your responses, you should generate JavaScript code that acc
 
   const handleWalletAddressClick = () => {
     setShowPopup(true);
-    setNewWalletAddress('');
+    setNewWalletAddress(walletAddress);
   };
 
-  const handleRemoveWalletAddress = async (index) => {
-    const updatedAddresses = walletAddresses.filter((_, i) => i !== index);
-    await updateWalletAddresses(updatedAddresses);
-  };
-
-  const handleAddWalletAddress = async () => {
-    if (newWalletAddress) {
-      const isEthereumAddress = /^0x[a-fA-F0-9]{40}$/.test(newWalletAddress);
-      const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newWalletAddress);
-      
-      if (!isEthereumAddress && !isSolanaAddress) {
-        setErrorSnackbar({ open: true, message: 'Invalid wallet address. Please enter a valid Ethereum or Solana address.' });
-        return;
-      }
-
-      const updatedAddresses = [...walletAddresses, newWalletAddress];
-      await updateWalletAddresses(updatedAddresses);
-      setNewWalletAddress('');
+  const handleWalletAddressChange = () => {
+    if (!/^0x[a-fA-F0-9]{40}$/.test(newWalletAddress)) {
+      setErrorSnackbar({ open: true, message: 'Invalid Ethereum wallet address' });
+      return;
     }
-  };
-
-  const updateWalletAddresses = async (updatedAddresses) => {
-    setIsWalletDataLoading(true);
-
-    try {
-      setWalletAddresses(updatedAddresses);
-      console.log('Updated wallet addresses:', updatedAddresses);
-
-      const [historicData, walletData] = await Promise.all([
-        fetchHistoricPortfolioData(null, null, updatedAddresses),
-        fetchWalletPortfolio(updatedAddresses)
-      ]);
-
-      // Wait for a short delay to ensure data is properly set
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Log the fetched data for debugging
-      console.log('Fetched historic data:', historicData);
-      console.log('Fetched wallet data:', walletData);
-
-      // Check if data is loaded
-      if (!historicData || !walletData) {
-        throw new Error('Failed to load wallet data: One or both data fetches returned null or undefined');
-      }
-
-      // Update the data state
-      setData(prevData => ({
-        ...prevData,
-        historicPortfolioData: historicData,
-        walletPortfolio: walletData
-      }));
-
-      setErrorSnackbar({ open: true, message: 'Wallet data updated successfully' });
-    } catch (error) {
-      console.error('Error updating wallet data:', error);
-      setErrorSnackbar({ open: true, message: `Failed to update wallet data: ${error.message}` });
-      // Revert wallet addresses if there was an error
-      setWalletAddresses(prevAddresses => prevAddresses);
-    } finally {
-      setIsWalletDataLoading(false);
-    }
+    setWalletAddress(newWalletAddress);
+    setShowPopup(false);
+    // Refetch data with new wallet address
+    fetchHistoricPortfolioData();
+    fetchWalletPortfolio();
   };
 
   // Add this new function to handle search input
@@ -1139,6 +964,41 @@ To use this data in your responses, you should generate JavaScript code that acc
     const data = await getMarketData(token);
     return data?.circulating_supply || 'N/A';
   };
+  const renderWalletPortfolio = () => {
+    if (isWalletPortfolioLoading) {
+      return <p>Loading wallet portfolio data...</p>;
+    }
+    
+    if (!getData('walletPortfolio')) {
+      return <p>No wallet portfolio data available.</p>;
+    }
+    
+    return (
+      <div style={styles.walletPortfolioContainer}>
+        <h3>Wallet Portfolio</h3>
+        <p>Total Balance: ${totalWalletBalance.toFixed(2)}</p>
+        <p>Total Realized PNL: ${totalRealizedPNL.toFixed(2)}</p>
+        <p>Total Unrealized PNL: ${totalUnrealizedPNL.toFixed(2)}</p>
+        <h4>Assets:</h4>
+        <ul>
+          {assets.map((asset, index) => (
+            <li key={index}>
+              {asset.asset.name} ({asset.asset.symbol}): 
+              Balance: {asset.token_balance.toFixed(6)}, 
+              Value: ${asset.estimated_balance.toFixed(2)}
+            </li>
+          ))}
+        </ul>
+        <h4>PNL History:</h4>
+        <ul>
+          <li>24h: Realized: ${totalPNLHistory['24h'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['24h'].unrealized.toFixed(2)}</li>
+          <li>7d: Realized: ${totalPNLHistory['7d'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['7d'].unrealized.toFixed(2)}</li>
+          <li>30d: Realized: ${totalPNLHistory['30d'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['30d'].unrealized.toFixed(2)}</li>
+          <li>1y: Realized: ${totalPNLHistory['1y'].realized.toFixed(2)}, Unrealized: ${totalPNLHistory['1y'].unrealized.toFixed(2)}</li>
+        </ul>
+      </div>
+    );
+  };
   const renderCryptoPanicNews = (coinname) => {
     const newsItems = data.cryptoPanicNews?.[coinname];
     
@@ -1160,76 +1020,8 @@ To use this data in your responses, you should generate JavaScript code that acc
     );
   };
 
-  const handleAcceptDisclaimer = () => {
-    setDisclaimerAccepted(true);
-  };
-
-  // Render the disclaimer dialog
-  const renderDisclaimerDialog = () => (
-    <Dialog
-      open={!disclaimerAccepted}
-      aria-labelledby="disclaimer-dialog-title"
-      aria-describedby="disclaimer-dialog-description"
-      PaperProps={{
-        style: {
-          backgroundColor: 'white',
-          color: 'black',
-          fontFamily: "'SK Modernist', sans-serif",
-        },
-      }}
-    >
-      <DialogTitle id="disclaimer-dialog-title" style={{ 
-        textAlign: 'center', 
-        fontSize: '24px',
-        fontWeight: 'bold',
-      }}>
-        {"DISCLAIMER"}
-      </DialogTitle>
-      <DialogContent>
-        <DialogContentText id="disclaimer-dialog-description" style={{ 
-          fontSize: '20px', 
-          textAlign: 'center',
-          color: 'black',
-          fontWeight: 'bold',
-        }}>
-          NOT FINANCIAL ADVICE
-        </DialogContentText>
-        <DialogContentText style={{ 
-          marginTop: '20px',
-          color: 'black',
-        }}>
-          The information provided by this application is for informational purposes only and should not be considered as financial advice. Always conduct your own research and consult with a qualified financial advisor before making any investment decisions.
-        </DialogContentText>
-      </DialogContent>
-      <DialogActions style={{ justifyContent: 'center', padding: '20px' }}>
-        <Button 
-          onClick={handleAcceptDisclaimer} 
-          variant="contained" 
-          style={{ 
-            backgroundColor: 'black',
-            color: 'white',
-            width: '200px',
-          }}
-        >
-          Accept and Continue
-        </Button>
-      </DialogActions>
-    </Dialog>
-  );
-
-  const handleCloseAnnouncement = () => {
-    setShowAnnouncement(false);
-  };
-
   return (
     <div style={styles.chatInterface}>
-      {renderDisclaimerDialog()}
-      {showAnnouncement && (
-        <div style={styles.announcementBar}>
-          <span style={styles.announcementText}>Degen AI can only answer questions related to your portfolio right now!</span>
-          <CloseIcon style={styles.closeButton} onClick={handleCloseAnnouncement} />
-        </div>
-      )}
       <div style={{
         ...styles.header,
         justifyContent: 'space-between',
@@ -1240,11 +1032,59 @@ To use this data in your responses, you should generate JavaScript code that acc
           alignItems: 'center',
           gap: '20px',
         }}>
+          <ThemeProvider theme={darkTheme}>
+            <div className="coin-selector">
+              <Select
+                value={selectedToken.symbol}
+                onChange={(e) => setSelectedToken(coins.find(coin => coin.symbol === e.target.value))}
+                renderValue={(selected) => (
+                  <div style={{ display: 'flex', alignItems: 'center', color: 'white' }}>
+                    <img src={selectedToken.logo} alt={selectedToken.symbol} style={{ width: 20, marginRight: 8 }} />
+                    {selected}
+                  </div>
+                )}
+                onOpen={() => setSearchTerm('')}
+                MenuProps={{
+                  PaperProps: {
+                    style: {
+                      backgroundColor: '#2a2a2a',
+                      color: 'white',
+                    },
+                  },
+                }}
+              >
+                <MenuItem>
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                  <input
+                    type="text"
+                    placeholder="Search coins..."
+                    value={searchTerm}
+                    onChange={handleSearchChange}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{
+                      border: 'none',
+                      outline: 'none',
+                      width: '100%',
+                      padding: '8px',
+                      backgroundColor: 'transparent',
+                      color: 'white',
+                    }}
+                  />
+                </MenuItem>
+                {filteredCoins.map((coin) => (
+                  <MenuItem key={coin.symbol} value={coin.symbol}>
+                    <img src={coin.logo} alt={coin.name} style={{ width: 20, marginRight: 8 }} />
+                    {coin.symbol} - {coin.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </div>
+          </ThemeProvider>
+         
           <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
-            {walletAddresses.length > 0
-              ? `${walletAddresses[0].slice(0, 6)}...${walletAddresses[0].slice(-4)}`
-              : 'Add Wallet'}
-            {walletAddresses.length > 1 && ` (+${walletAddresses.length - 1})`}
+            {walletAddress.slice(0, 6)}...{walletAddress.slice(-4)}
           </div>
         </div>
       </div>
@@ -1274,39 +1114,14 @@ To use this data in your responses, you should generate JavaScript code that acc
       {error && <div style={styles.error}>{error}</div>}
       {showPopup && (
         <div style={styles.popup}>
-          {walletAddresses.map((address, index) => (
-            <div key={index} style={styles.walletAddressItem}>
-              <input
-                type="text"
-                value={address}
-                readOnly
-                style={styles.popupInput}
-              />
-              <DeleteIcon
-                onClick={() => handleRemoveWalletAddress(index)}
-                style={styles.deleteIcon}
-              />
-            </div>
-          ))}
-          <div style={styles.walletAddressItem}>
-            <input
-              type="text"
-              value={newWalletAddress}
-              onChange={(e) => setNewWalletAddress(e.target.value)}
-              placeholder="Enter new wallet address"
-              style={styles.popupInput}
-            />
-            <AddIcon
-              onClick={handleAddWalletAddress}
-              style={styles.addIcon}
-            />
-          </div>
-          <button 
-            onClick={() => setShowPopup(false)} 
-            style={styles.popupButton}
-            disabled={isWalletDataLoading}
-          >
-            Close
+          <input
+            type="text"
+            value={newWalletAddress}
+            onChange={(e) => setNewWalletAddress(e.target.value)}
+            style={styles.popupInput}
+          />
+          <button onClick={handleWalletAddressChange} style={styles.popupButton}>
+            Set Wallet Address
           </button>
         </div>
       )}
