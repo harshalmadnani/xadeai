@@ -98,10 +98,19 @@ const ChatInterfaceUI = ({
         {errorSnackbar.message}
       </Alert>
     </Snackbar>
-    <Dialog open={isWalletDialogOpen} onClose={handleCloseWalletDialog}>
-      <DialogTitle>Manage Wallet Addresses</DialogTitle>
+    <Dialog 
+      open={isWalletDialogOpen} 
+      onClose={handleCloseWalletDialog}
+      PaperProps={{
+        style: {
+          backgroundColor: '#1a1a1a',
+          color: 'white',
+        }
+      }}
+    >
+      <DialogTitle style={{ color: 'white' }}>Manage Wallet Addresses</DialogTitle>
       <DialogContent>
-        <DialogContentText>
+        <DialogContentText style={{ color: '#999' }}>
           Add or remove wallet addresses to analyze your portfolio.
         </DialogContentText>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
@@ -111,11 +120,33 @@ const ChatInterfaceUI = ({
             onChange={(e) => setNewWalletAddress(e.target.value)}
             placeholder="Enter wallet address"
             variant="outlined"
+            sx={{
+              '& .MuiOutlinedInput-root': {
+                color: 'white',
+                '& fieldset': {
+                  borderColor: '#444',
+                },
+                '&:hover fieldset': {
+                  borderColor: '#666',
+                },
+                '&.Mui-focused fieldset': {
+                  borderColor: '#888',
+                },
+              },
+              '& .MuiInputBase-input::placeholder': {
+                color: '#666',
+                opacity: 1,
+              },
+            }}
           />
           <Button
             onClick={handleAddWalletAddress}
             variant="contained"
-            style={{ minWidth: 'auto' }}
+            style={{ 
+              minWidth: 'auto',
+              backgroundColor: '#333',
+              color: 'white',
+            }}
           >
             <AddIcon />
           </Button>
@@ -124,19 +155,42 @@ const ChatInterfaceUI = ({
         {/* Display list of added addresses */}
         <div style={{ marginTop: '20px' }}>
           {portfolioAddresses.map((address, index) => (
-            <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
-              <Typography style={{ flex: 1, wordBreak: 'break-all' }}>
+            <div key={index} style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              marginBottom: '10px',
+              backgroundColor: '#333',
+              padding: '8px',
+              borderRadius: '4px',
+            }}>
+              <Typography style={{ 
+                flex: 1, 
+                wordBreak: 'break-all',
+                color: 'white',
+              }}>
                 {address}
               </Typography>
-              <IconButton onClick={() => handleRemoveWalletAddress(index)} size="small">
+              <IconButton 
+                onClick={() => handleRemoveWalletAddress(index)} 
+                size="small"
+                style={{ color: '#ff4444' }}
+              >
                 <DeleteIcon />
               </IconButton>
             </div>
           ))}
         </div>
       </DialogContent>
-      <DialogActions>
-        <Button onClick={handleCloseWalletDialog}>Close</Button>
+      <DialogActions style={{ padding: '16px' }}>
+        <Button 
+          onClick={handleCloseWalletDialog}
+          style={{
+            color: 'white',
+            backgroundColor: '#333',
+          }}
+        >
+          Close
+        </Button>
       </DialogActions>
     </Dialog>
   </div>
