@@ -51,12 +51,12 @@ const ChatInterfaceUI = ({
 }) => (
   <div style={styles.chatInterface}>
     {renderDisclaimerDialog()}
-    {showAnnouncement && (
+    {/* {showAnnouncement && (
       <div style={styles.announcementBar}>
-        <span style={styles.announcementText}>Degen AI can only answer questions related to your portfolio right now!</span>
+        <span style={styles.announcementText}>Degen AI can take upt!</span>
         <CloseIcon style={styles.closeButton} onClick={handleCloseAnnouncement} />
       </div>
-    )}
+    )} */}
     <div style={{
       ...styles.header,
       justifyContent: 'space-between',
