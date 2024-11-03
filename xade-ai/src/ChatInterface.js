@@ -26,25 +26,16 @@ const ChatInterfaceUI = ({
   renderDisclaimerDialog,
   showAnnouncement,
   styles,
-  walletAddresses,
   messages,
   messageListRef,
   input,
   isLoading,
   error,
-  showPopup,
-  newWalletAddress,
   errorSnackbar,
-  isWalletDataLoading,
   // Handler functions
   handleCloseAnnouncement,
-  handleWalletAddressClick,
   handleSubmit,
   setInput,
-  handleRemoveWalletAddress,
-  setNewWalletAddress,
-  handleAddWalletAddress,
-  setShowPopup,
   handleCloseErrorSnackbar,
   renderMessage
 }) => (
@@ -61,18 +52,6 @@ const ChatInterfaceUI = ({
       justifyContent: 'space-between',
     }}>
       <img src='./XADE.png' alt="Xade AI Logo" style={styles.logo} />
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '20px',
-      }}>
-        <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
-          {walletAddresses.length > 0
-            ? `${walletAddresses[0].slice(0, 6)}...${walletAddresses[0].slice(-4)}`
-            : 'Add Wallet'}
-          {walletAddresses.length > 1 && ` (+${walletAddresses.length - 1})`}
-        </div>
-      </div>
     </div>
     <div style={styles.messageListContainer}>
       <div style={styles.messageList} ref={messageListRef}>
@@ -97,44 +76,6 @@ const ChatInterfaceUI = ({
       </button>
     </form>
     {error && <div style={styles.error}>{error}</div>}
-    {showPopup && (
-      <div style={styles.popup}>
-        {walletAddresses.map((address, index) => (
-          <div key={index} style={styles.walletAddressItem}>
-            <input
-              type="text"
-              value={address}
-              readOnly
-              style={styles.popupInput}
-            />
-            <DeleteIcon
-              onClick={() => handleRemoveWalletAddress(index)}
-              style={styles.deleteIcon}
-            />
-          </div>
-        ))}
-        <div style={styles.walletAddressItem}>
-          <input
-            type="text"
-            value={newWalletAddress}
-            onChange={(e) => setNewWalletAddress(e.target.value)}
-            placeholder="Enter new wallet address"
-            style={styles.popupInput}
-          />
-          <AddIcon
-            onClick={handleAddWalletAddress}
-            style={styles.addIcon}
-          />
-        </div>
-        <button 
-          onClick={() => setShowPopup(false)} 
-          style={styles.popupButton}
-          disabled={isWalletDataLoading}
-        >
-          Close
-        </button>
-      </div>
-    )}
     <Snackbar open={errorSnackbar.open} autoHideDuration={6000} onClose={handleCloseErrorSnackbar}>
       <Alert onClose={handleCloseErrorSnackbar} severity="error" sx={{ width: '100%' }}>
         {errorSnackbar.message}
@@ -148,9 +89,6 @@ function ChatInterface() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [walletAddresses, setWalletAddresses] = useState([]);
-  const [newWalletAddress, setNewWalletAddress] = useState('');
-  const [showPopup, setShowPopup] = useState(false);
   const [selectedToken, setSelectedToken] = useState(coins[0]);
   const [selectedCoin, setSelectedCoin] = useState('bitcoin');
   const [searchTerm, setSearchTerm] = useState('');
@@ -190,8 +128,6 @@ function ChatInterface() {
   const [isWalletPortfolioLoading, setIsWalletPortfolioLoading] = useState(true);
   const [historicPortfolioData, setHistoricPortfolioData] = useState(null);
   const [priceHistoryData, setPriceHistoryData] = useState({});
-
-  const [isWalletDataLoading, setIsWalletDataLoading] = useState(false);
 
   // Add this constant after the existing state declarations
   const priceHistory = Object.entries(priceHistoryData).map(([coinName, data]) => ({
@@ -233,6 +169,8 @@ function ChatInterface() {
       unrealized: totalPNLHistory?.['1y']?.unrealized?.toFixed(2) ?? 'N/A'
     }
   };
+
+  const [walletAddresses] = useState(['']); // Example default address
 
   useEffect(() => {
     if (messageListRef.current) {
@@ -863,236 +801,6 @@ return data;
     );
   };
 
-  const handleWalletAddressClick = () => {
-    setShowPopup(true);
-    setNewWalletAddress('');
-  };
-
-  const handleRemoveWalletAddress = async (index) => {
-    const updatedAddresses = walletAddresses.filter((_, i) => i !== index);
-    await updateWalletAddresses(updatedAddresses);
-  };
-
-  const handleAddWalletAddress = async () => {
-    if (newWalletAddress) {
-      const isEthereumAddress = /^0x[a-fA-F0-9]{40}$/.test(newWalletAddress);
-      const isSolanaAddress = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(newWalletAddress);
-      
-      if (!isEthereumAddress && !isSolanaAddress) {
-        setErrorSnackbar({ open: true, message: 'Invalid wallet address. Please enter a valid Ethereum or Solana address.' });
-        return;
-      }
-
-      const updatedAddresses = [...walletAddresses, newWalletAddress];
-      await updateWalletAddresses(updatedAddresses);
-      setNewWalletAddress('');
-    }
-  };
-
-  const updateWalletAddresses = async (updatedAddresses) => {
-    setIsWalletDataLoading(true);
-
-    try {
-      setWalletAddresses(updatedAddresses);
-      console.log('Updated wallet addresses:', updatedAddresses);
-
-      const [historicData, walletData] = await Promise.all([
-        fetchHistoricPortfolioData(null, null, updatedAddresses),
-        fetchWalletPortfolio(updatedAddresses)
-      ]);
-
-      // Wait for a short delay to ensure data is properly set
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Log the fetched data for debugging
-      console.log('Fetched historic data:', historicData);
-      console.log('Fetched wallet data:', walletData);
-
-      // Check if data is loaded
-      if (!historicData || !walletData) {
-        throw new Error('Failed to load wallet data: One or both data fetches returned null or undefined');
-      }
-
-      // Update the data state
-      setData(prevData => ({
-        ...prevData,
-        historicPortfolioData: historicData,
-        walletPortfolio: walletData
-      }));
-
-      setErrorSnackbar({ open: true, message: 'Wallet data updated successfully' });
-    } catch (error) {
-      console.error('Error updating wallet data:', error);
-      setErrorSnackbar({ open: true, message: `Failed to update wallet data: ${error.message}` });
-      // Revert wallet addresses if there was an error
-      setWalletAddresses(prevAddresses => prevAddresses);
-    } finally {
-      setIsWalletDataLoading(false);
-    }
-  };
-
-  // Add this new function to handle search input
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value);
-  };
-
-  // Add a function to handle closing the error snackbar
-  const handleCloseErrorSnackbar = (event, reason) => {
-    if (reason === 'clickaway') {
-      return;
-    }
-    setErrorSnackbar({ ...errorSnackbar, open: false });
-  };
-
-  // Modify these functions to return Promises
-  const website = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const metadata = await getMetadata(normalizedToken);
-    return metadata?.website || 'N/A';
-  };
-  const twitter = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const metadata = await getMetadata(normalizedToken);
-    return metadata?.twitter || 'N/A';
-  };
-  const telegram = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const metadata = await getMetadata(normalizedToken);
-    return metadata?.telegram || 'N/A';
-  };
-  const discord = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const metadata = await getMetadata(normalizedToken);
-    return metadata?.discord || 'N/A';
-  };
-  const description = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const metadata = await getMetadata(normalizedToken);
-    return metadata?.description || 'N/A';
-  };
-  const price = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    console.log('*****Price*****:', data);
-    if (!data) return 'please resend the prompt';
-    return data.price !== undefined ? `$${data.price.toFixed(2)}` : 'N/A';
-  };
-  const volume = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return data?.volume !== undefined ? `$${data.volume.toFixed(2)}` : 'N/A';
-  };
-  const marketCap = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return data?.market_cap !== undefined ? `$${data.market_cap.toFixed(2)}` : 'N/A';
-  };
-  const marketCapDiluted = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `$${data?.market_cap_diluted?.toFixed(2) || 'N/A'}`;
-  };
-  const liquidity = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `$${data?.liquidity?.toFixed(2) || 'N/A'}`;
-  };
-  const liquidityChange24h = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `${data?.liquidity_change_24h?.toFixed(2) || 'N/A'}%`;
-  };
-  const offChainVolume = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `$${data?.off_chain_volume?.toFixed(2) || 'N/A'}`;
-  };
-  const volume7d = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `$${data?.volume_7d?.toFixed(2) || 'N/A'}`;
-  };
-  const volumeChange24h = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `${data?.volume_change_24h?.toFixed(2) || 'N/A'}%`;
-  };
-  const isListed = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return data?.is_listed ? 'Yes' : 'No';
-  };
-  const priceChange24h = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `${data?.price_change_24h?.toFixed(2) || 'N/A'}%`;
-  };
-  const priceChange1h = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `${data?.price_change_1h?.toFixed(2) || 'N/A'}%`;
-  };
-  const priceChange7d = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `${data?.price_change_7d?.toFixed(2) || 'N/A'}%`;
-  };
-  const priceChange1m = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `${data?.price_change_1m?.toFixed(2) || 'N/A'}%`;
-  };
-  const priceChange1y = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `${data?.price_change_1y?.toFixed(2) || 'N/A'}%`;
-  };
-  const ath = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `$${data?.ath?.toFixed(2) || 'N/A'}`;
-  };
-  const atl = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return `$${data?.atl?.toFixed(2) || 'N/A'}`;
-  };
-  const rank = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return data?.rank || 'N/A';
-  };
-  const totalSupply = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return data?.total_supply || 'N/A';
-  };
-  const circulatingSupply = async (token) => {
-    const normalizedToken = getTokenName(token);
-    const data = await getMarketData(normalizedToken);
-    return data?.circulating_supply || 'N/A';
-  };
-  const renderCryptoPanicNews = (coinname) => {
-    const newsItems = data.cryptoPanicNews?.[coinname];
-    
-    if (!newsItems || newsItems.length === 0) {
-      return <Typography>No news available for {coinname}</Typography>;
-    }
-
-    return (
-      <div>
-        <Typography variant="h6">Latest News for {coinname}</Typography>
-        {newsItems.map((item, index) => (
-          <Typography key={index}>
-            <Link href={item.url} target="_blank" rel="noopener noreferrer">
-              {item.title}
-            </Link>
-          </Typography>
-        ))}
-      </div>
-    );
-  };
-
   const handleAcceptDisclaimer = () => {
     setDisclaimerAccepted(true);
   };
@@ -1276,30 +984,174 @@ return data;
     }
   };
 
+  // Add these helper functions for token data
+  const website = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    return metadata?.website || 'N/A';
+  };
+  const twitter = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    return metadata?.twitter || 'N/A';
+  };
+  const telegram = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    return metadata?.telegram || 'N/A';
+  };
+  const discord = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    return metadata?.discord || 'N/A';
+  };
+  const description = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    return metadata?.description || 'N/A';
+  };
+  const price = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    console.log('*****Price*****:', data);
+    if (!data) return 'please resend the prompt';
+    return data.price !== undefined ? `$${data.price.toFixed(2)}` : 'N/A';
+  };
+  const volume = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return data?.volume !== undefined ? `$${data.volume.toFixed(2)}` : 'N/A';
+  };
+  const marketCap = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return data?.market_cap !== undefined ? `$${data.market_cap.toFixed(2)}` : 'N/A';
+  };
+  const marketCapDiluted = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `$${data?.market_cap_diluted?.toFixed(2) || 'N/A'}`;
+  };
+  const liquidity = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `$${data?.liquidity?.toFixed(2) || 'N/A'}`;
+  };
+  const liquidityChange24h = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `${data?.liquidity_change_24h?.toFixed(2) || 'N/A'}%`;
+  };
+  const offChainVolume = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `$${data?.off_chain_volume?.toFixed(2) || 'N/A'}`;
+  };
+  const volume7d = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `$${data?.volume_7d?.toFixed(2) || 'N/A'}`;
+  };
+  const volumeChange24h = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `${data?.volume_change_24h?.toFixed(2) || 'N/A'}%`;
+  };
+  const isListed = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return data?.is_listed ? 'Yes' : 'No';
+  };
+  const priceChange24h = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `${data?.price_change_24h?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange1h = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `${data?.price_change_1h?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange7d = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `${data?.price_change_7d?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange1m = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `${data?.price_change_1m?.toFixed(2) || 'N/A'}%`;
+  };
+  const priceChange1y = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `${data?.price_change_1y?.toFixed(2) || 'N/A'}%`;
+  };
+  const ath = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `$${data?.ath?.toFixed(2) || 'N/A'}`;
+  };
+  const atl = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return `$${data?.atl?.toFixed(2) || 'N/A'}`;
+  };
+  const rank = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return data?.rank || 'N/A';
+  };
+  const totalSupply = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return data?.total_supply || 'N/A';
+  };
+  const circulatingSupply = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    return data?.circulating_supply || 'N/A';
+  };
+  const renderCryptoPanicNews = (coinname) => {
+    const newsItems = data.cryptoPanicNews?.[coinname];
+    
+    if (!newsItems || newsItems.length === 0) {
+      return <Typography>No news available for {coinname}</Typography>;
+    }
+
+    return (
+      <div>
+        <Typography variant="h6">Latest News for {coinname}</Typography>
+        {newsItems.map((item, index) => (
+          <Typography key={index}>
+            <Link href={item.url} target="_blank" rel="noopener noreferrer">
+              {item.title}
+            </Link>
+          </Typography>
+        ))}
+      </div>
+    );
+  };
+
+  const handleCloseErrorSnackbar = () => {
+    setErrorSnackbar({ open: false, message: '' });
+  };
+
   return (
     <ChatInterfaceUI
       disclaimerAccepted={disclaimerAccepted}
       renderDisclaimerDialog={renderDisclaimerDialog}
       showAnnouncement={showAnnouncement}
       styles={styles}
-      walletAddresses={walletAddresses}
       messages={messages}
       messageListRef={messageListRef}
       input={input}
       isLoading={isLoading}
       error={error}
-      showPopup={showPopup}
-      newWalletAddress={newWalletAddress}
       errorSnackbar={errorSnackbar}
-      isWalletDataLoading={isWalletDataLoading}
       handleCloseAnnouncement={handleCloseAnnouncement}
-      handleWalletAddressClick={handleWalletAddressClick}
       handleSubmit={handleSubmit}
       setInput={setInput}
-      handleRemoveWalletAddress={handleRemoveWalletAddress}
-      setNewWalletAddress={setNewWalletAddress}
-      handleAddWalletAddress={handleAddWalletAddress}
-      setShowPopup={setShowPopup}
       handleCloseErrorSnackbar={handleCloseErrorSnackbar}
       renderMessage={renderMessage}
     />
