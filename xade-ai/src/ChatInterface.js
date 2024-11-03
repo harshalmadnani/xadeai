@@ -914,9 +914,6 @@ return data;
           ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble)
         }}>
           <div dangerouslySetInnerHTML={{ __html: content }} />
-          {message.role === 'user' && index === messages.length - 2 && (
-            <div style={styles.tokenCount}>Input Tokens: {inputTokens}</div>
-          )}
           {message.role === 'assistant' && index === messages.length - 1 && responseTime && (
             <Typography variant="caption" style={{ marginTop: '5px', color: '#888' }}>
               Response time: {responseTime}ms
