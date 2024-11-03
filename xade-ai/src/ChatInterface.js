@@ -10,6 +10,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { styles } from './ChatInterfaceStyles';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
 // Create a context for storing fetched data
 const DataContext = createContext(null);
 
@@ -37,7 +39,15 @@ const ChatInterfaceUI = ({
   handleSubmit,
   setInput,
   handleCloseErrorSnackbar,
-  renderMessage
+  renderMessage,
+  portfolioAddresses,
+  isWalletDialogOpen,
+  newWalletAddress,
+  handleOpenWalletDialog,
+  handleCloseWalletDialog,
+  handleAddWalletAddress,
+  handleRemoveWalletAddress,
+  setNewWalletAddress,
 }) => (
   <div style={styles.chatInterface}>
     {renderDisclaimerDialog()}
@@ -52,6 +62,13 @@ const ChatInterfaceUI = ({
       justifyContent: 'space-between',
     }}>
       <img src='./XADE.png' alt="Xade AI Logo" style={styles.logo} />
+      <IconButton
+        onClick={handleOpenWalletDialog}
+        style={{ color: 'white' }}
+        title="Manage Wallet Addresses"
+      >
+        <AddIcon />
+      </IconButton>
     </div>
     <div style={styles.messageListContainer}>
       <div style={styles.messageList} ref={messageListRef}>
@@ -81,6 +98,47 @@ const ChatInterfaceUI = ({
         {errorSnackbar.message}
       </Alert>
     </Snackbar>
+    <Dialog open={isWalletDialogOpen} onClose={handleCloseWalletDialog}>
+      <DialogTitle>Manage Wallet Addresses</DialogTitle>
+      <DialogContent>
+        <DialogContentText>
+          Add or remove wallet addresses to analyze your portfolio.
+        </DialogContentText>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+          <TextField
+            fullWidth
+            value={newWalletAddress}
+            onChange={(e) => setNewWalletAddress(e.target.value)}
+            placeholder="Enter wallet address"
+            variant="outlined"
+          />
+          <Button
+            onClick={handleAddWalletAddress}
+            variant="contained"
+            style={{ minWidth: 'auto' }}
+          >
+            <AddIcon />
+          </Button>
+        </div>
+        
+        {/* Display list of added addresses */}
+        <div style={{ marginTop: '20px' }}>
+          {portfolioAddresses.map((address, index) => (
+            <div key={index} style={{ display: 'flex', alignItems: 'center', marginBottom: '10px' }}>
+              <Typography style={{ flex: 1, wordBreak: 'break-all' }}>
+                {address}
+              </Typography>
+              <IconButton onClick={() => handleRemoveWalletAddress(index)} size="small">
+                <DeleteIcon />
+              </IconButton>
+            </div>
+          ))}
+        </div>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={handleCloseWalletDialog}>Close</Button>
+      </DialogActions>
+    </Dialog>
   </div>
 );
 
@@ -513,6 +571,8 @@ function ChatInterface() {
             role: "system",
             content: `You are Xade AI's data fetcher. Your only role is to identify and fetch the relevant data based on the user's question. Do not perform any calculations or analysis.
 
+The user's wallet addresses are: ${portfolioAddresses.join(', ')}
+
 Available functions:
 - Market Data:
   - price(token) - returns current price in USD
@@ -669,7 +729,8 @@ return data;
         realizedPNL: portfolioRealizedPNL,
         unrealizedPNL: portfolioUnrealizedPNL,
         assetsList: portfolioAssetsList,
-        pnlTimelines: portfolioPNLTimelines
+        pnlTimelines: portfolioPNLTimelines,
+        walletAddresses: portfolioAddresses
       };
 
       const wrappedFunctions = {
@@ -730,7 +791,7 @@ return data;
         'priceChange1h', 'priceChange7d', 'priceChange1m', 'priceChange1y', 'ath', 'atl',
         'rank', 'totalSupply', 'circulatingSupply', 'website', 'twitter', 'telegram',
         'discord', 'description', 'portfolioData', 'renderCryptoPanicNews',
-        'historicPortfolioData', 'getNews',
+        'historicPortfolioData', 'getNews', 'portfolioAddresses',
         wrappedCode
       );
 
@@ -742,7 +803,7 @@ return data;
         priceChange1h, priceChange7d, priceChange1m, priceChange1y, ath, atl,
         rank, totalSupply, circulatingSupply, website, twitter, telegram,
         discord, description, portfolioData, renderCryptoPanicNews,
-        historicPortfolioData, getNews
+        historicPortfolioData, getNews, portfolioAddresses
       );
 
       if (result === undefined) {
@@ -1137,6 +1198,32 @@ return data;
     setErrorSnackbar({ open: false, message: '' });
   };
 
+  // Add new state for wallet management
+  const [portfolioAddresses, setPortfolioAddresses] = useState([]);
+  const [isWalletDialogOpen, setIsWalletDialogOpen] = useState(false);
+  const [newWalletAddress, setNewWalletAddress] = useState('');
+
+  // Add wallet management handlers
+  const handleOpenWalletDialog = () => {
+    setIsWalletDialogOpen(true);
+  };
+
+  const handleCloseWalletDialog = () => {
+    setIsWalletDialogOpen(false);
+    setNewWalletAddress('');
+  };
+
+  const handleAddWalletAddress = () => {
+    if (newWalletAddress.trim() && !portfolioAddresses.includes(newWalletAddress.trim())) {
+      setPortfolioAddresses([...portfolioAddresses, newWalletAddress.trim()]);
+      setNewWalletAddress('');
+    }
+  };
+
+  const handleRemoveWalletAddress = (index) => {
+    setPortfolioAddresses(portfolioAddresses.filter((_, i) => i !== index));
+  };
+
   return (
     <ChatInterfaceUI
       disclaimerAccepted={disclaimerAccepted}
@@ -1154,6 +1241,14 @@ return data;
       setInput={setInput}
       handleCloseErrorSnackbar={handleCloseErrorSnackbar}
       renderMessage={renderMessage}
+      portfolioAddresses={portfolioAddresses}
+      isWalletDialogOpen={isWalletDialogOpen}
+      newWalletAddress={newWalletAddress}
+      handleOpenWalletDialog={handleOpenWalletDialog}
+      handleCloseWalletDialog={handleCloseWalletDialog}
+      handleAddWalletAddress={handleAddWalletAddress}
+      handleRemoveWalletAddress={handleRemoveWalletAddress}
+      setNewWalletAddress={setNewWalletAddress}
     />
   );
 }
