@@ -20,11 +20,128 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
-const darkTheme = createTheme({
-  palette: {
-    mode: 'dark',
-  },
-});
+// Create a new component for the UI
+const ChatInterfaceUI = ({
+  disclaimerAccepted,
+  renderDisclaimerDialog,
+  showAnnouncement,
+  styles,
+  walletAddresses,
+  messages,
+  messageListRef,
+  input,
+  isLoading,
+  error,
+  showPopup,
+  newWalletAddress,
+  errorSnackbar,
+  isWalletDataLoading,
+  // Handler functions
+  handleCloseAnnouncement,
+  handleWalletAddressClick,
+  handleSubmit,
+  setInput,
+  handleRemoveWalletAddress,
+  setNewWalletAddress,
+  handleAddWalletAddress,
+  setShowPopup,
+  handleCloseErrorSnackbar,
+  renderMessage
+}) => (
+  <div style={styles.chatInterface}>
+    {renderDisclaimerDialog()}
+    {showAnnouncement && (
+      <div style={styles.announcementBar}>
+        <span style={styles.announcementText}>Degen AI can only answer questions related to your portfolio right now!</span>
+        <CloseIcon style={styles.closeButton} onClick={handleCloseAnnouncement} />
+      </div>
+    )}
+    <div style={{
+      ...styles.header,
+      justifyContent: 'space-between',
+    }}>
+      <img src='./XADE.png' alt="Xade AI Logo" style={styles.logo} />
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '20px',
+      }}>
+        <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
+          {walletAddresses.length > 0
+            ? `${walletAddresses[0].slice(0, 6)}...${walletAddresses[0].slice(-4)}`
+            : 'Add Wallet'}
+          {walletAddresses.length > 1 && ` (+${walletAddresses.length - 1})`}
+        </div>
+      </div>
+    </div>
+    <div style={styles.messageListContainer}>
+      <div style={styles.messageList} ref={messageListRef}>
+        {messages.map((message, index) => renderMessage(message, index))}
+      </div>
+    </div>
+    <form onSubmit={handleSubmit} style={styles.inputForm}>
+      <input
+        type="text"
+        value={input}
+        onChange={(e) => setInput(e.target.value)}
+        placeholder="Type your message..."
+        disabled={isLoading}
+        style={styles.input}
+      />
+      <button 
+        type="submit" 
+        disabled={isLoading} 
+        style={{...styles.sendButton, ...(isLoading ? styles.sendButtonDisabled : {})}}
+      >
+        {isLoading ? 'Analyzing...' : 'Send'}
+      </button>
+    </form>
+    {error && <div style={styles.error}>{error}</div>}
+    {showPopup && (
+      <div style={styles.popup}>
+        {walletAddresses.map((address, index) => (
+          <div key={index} style={styles.walletAddressItem}>
+            <input
+              type="text"
+              value={address}
+              readOnly
+              style={styles.popupInput}
+            />
+            <DeleteIcon
+              onClick={() => handleRemoveWalletAddress(index)}
+              style={styles.deleteIcon}
+            />
+          </div>
+        ))}
+        <div style={styles.walletAddressItem}>
+          <input
+            type="text"
+            value={newWalletAddress}
+            onChange={(e) => setNewWalletAddress(e.target.value)}
+            placeholder="Enter new wallet address"
+            style={styles.popupInput}
+          />
+          <AddIcon
+            onClick={handleAddWalletAddress}
+            style={styles.addIcon}
+          />
+        </div>
+        <button 
+          onClick={() => setShowPopup(false)} 
+          style={styles.popupButton}
+          disabled={isWalletDataLoading}
+        >
+          Close
+        </button>
+      </div>
+    )}
+    <Snackbar open={errorSnackbar.open} autoHideDuration={6000} onClose={handleCloseErrorSnackbar}>
+      <Alert onClose={handleCloseErrorSnackbar} severity="error" sx={{ width: '100%' }}>
+        {errorSnackbar.message}
+      </Alert>
+    </Snackbar>
+  </div>
+);
 
 function ChatInterface() {
   const [input, setInput] = useState('');
@@ -1162,100 +1279,32 @@ return data;
   };
 
   return (
-    <div style={styles.chatInterface}>
-      {renderDisclaimerDialog()}
-      {showAnnouncement && (
-        <div style={styles.announcementBar}>
-          <span style={styles.announcementText}>Degen AI can only answer questions related to your portfolio right now!</span>
-          <CloseIcon style={styles.closeButton} onClick={handleCloseAnnouncement} />
-        </div>
-      )}
-      <div style={{
-        ...styles.header,
-        justifyContent: 'space-between',
-      }}>
-        <img src='./XADE.png' alt="Xade AI Logo" style={styles.logo} />
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '20px',
-        }}>
-          <div style={styles.walletAddress} onClick={handleWalletAddressClick}>
-            {walletAddresses.length > 0
-              ? `${walletAddresses[0].slice(0, 6)}...${walletAddresses[0].slice(-4)}`
-              : 'Add Wallet'}
-            {walletAddresses.length > 1 && ` (+${walletAddresses.length - 1})`}
-          </div>
-        </div>
-      </div>
-      <div style={styles.messageListContainer}>
-        <div style={styles.messageList} ref={messageListRef}>
-          {messages.map((message, index) => renderMessage(message, index))}
-        </div>
-
-      </div>
-      <form onSubmit={handleSubmit} style={styles.inputForm}>
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Type your message..."
-          disabled={isLoading}
-          style={styles.input}
-        />
-        <button 
-          type="submit" 
-          disabled={isLoading} 
-          style={{...styles.sendButton, ...(isLoading ? styles.sendButtonDisabled : {})}}
-        >
-          {isLoading ? 'Analyzing...' : 'Send'}
-        </button>
-      </form>
-      {error && <div style={styles.error}>{error}</div>}
-      {showPopup && (
-        <div style={styles.popup}>
-          {walletAddresses.map((address, index) => (
-            <div key={index} style={styles.walletAddressItem}>
-              <input
-                type="text"
-                value={address}
-                readOnly
-                style={styles.popupInput}
-              />
-              <DeleteIcon
-                onClick={() => handleRemoveWalletAddress(index)}
-                style={styles.deleteIcon}
-              />
-            </div>
-          ))}
-          <div style={styles.walletAddressItem}>
-            <input
-              type="text"
-              value={newWalletAddress}
-              onChange={(e) => setNewWalletAddress(e.target.value)}
-              placeholder="Enter new wallet address"
-              style={styles.popupInput}
-            />
-            <AddIcon
-              onClick={handleAddWalletAddress}
-              style={styles.addIcon}
-            />
-          </div>
-          <button 
-            onClick={() => setShowPopup(false)} 
-            style={styles.popupButton}
-            disabled={isWalletDataLoading}
-          >
-            Close
-          </button>
-        </div>
-      )}
-      <Snackbar open={errorSnackbar.open} autoHideDuration={6000} onClose={handleCloseErrorSnackbar}>
-        <Alert onClose={handleCloseErrorSnackbar} severity="error" sx={{ width: '100%' }}>
-          {errorSnackbar.message}
-        </Alert>
-      </Snackbar>
-    </div>
+    <ChatInterfaceUI
+      disclaimerAccepted={disclaimerAccepted}
+      renderDisclaimerDialog={renderDisclaimerDialog}
+      showAnnouncement={showAnnouncement}
+      styles={styles}
+      walletAddresses={walletAddresses}
+      messages={messages}
+      messageListRef={messageListRef}
+      input={input}
+      isLoading={isLoading}
+      error={error}
+      showPopup={showPopup}
+      newWalletAddress={newWalletAddress}
+      errorSnackbar={errorSnackbar}
+      isWalletDataLoading={isWalletDataLoading}
+      handleCloseAnnouncement={handleCloseAnnouncement}
+      handleWalletAddressClick={handleWalletAddressClick}
+      handleSubmit={handleSubmit}
+      setInput={setInput}
+      handleRemoveWalletAddress={handleRemoveWalletAddress}
+      setNewWalletAddress={setNewWalletAddress}
+      handleAddWalletAddress={handleAddWalletAddress}
+      setShowPopup={setShowPopup}
+      handleCloseErrorSnackbar={handleCloseErrorSnackbar}
+      renderMessage={renderMessage}
+    />
   );
 }
 
