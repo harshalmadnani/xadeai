@@ -22,6 +22,13 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
+// Add Groq import at the top
+const Groq = require('groq-sdk');
+const groq = new Groq({
+  apiKey: process.env.REACT_APP_GROQ_API_KEY,
+  dangerouslyAllowBrowser: true 
+});
+
 // Create a new component for the UI
 const ChatInterfaceUI = ({
   disclaimerAccepted,
@@ -742,27 +749,24 @@ return data;
           const executionStartTime = Date.now();
           let result;
 
-          // Execute code without timeout
           result = await executeCode(codeMatch[1]);
           const executionTime = Date.now() - executionStartTime;
 
           console.log('Execution result:', result);
 
-          // Make a direct call to OpenAI API without the system prompt
-          const finalResponse = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
+          // Make call to Groq API instead of OpenAI
+          const finalResponse = await groq.chat.completions.create({
             messages: [
-              { role: "user", content: `As Degen AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result}` }
+              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result}` }
             ],
+            model: "llama3-8b-8192",
             temperature: 0.7,
             max_tokens: 3000,
             top_p: 1,
-            frequency_penalty: 0,
-            presence_penalty: 0,
+            stream: false
           });
 
-          console.log('Final response from GPT-4o-mini:', finalResponse.choices[0].message.content);
-
+          console.log('Final response from Groq:', finalResponse.choices[0].message.content);
           return finalResponse.choices[0].message.content;
         }
         return response;

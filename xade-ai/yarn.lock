@@ -9910,6 +9910,21 @@ __metadata:
   languageName: node
   linkType: hard
 
+"groq-sdk@npm:^0.7.0":
+  version: 0.7.0
+  resolution: "groq-sdk@npm:0.7.0"
+  dependencies:
+    "@types/node": ^18.11.18
+    "@types/node-fetch": ^2.6.4
+    abort-controller: ^3.0.0
+    agentkeepalive: ^4.2.1
+    form-data-encoder: 1.7.2
+    formdata-node: ^4.3.2
+    node-fetch: ^2.6.7
+  checksum: 1ba329f42d55b6d1807e7c39bc4a8e2c1f2d8b8f20c33124389290fdb0a0ca5b3cce3e3c3dcd79665da332f8877a8355c7d59ee7a5be52e2349b0b8d8c176a41
+  languageName: node
+  linkType: hard
+
 "gzip-size@npm:^6.0.0":
   version: 6.0.0
   resolution: "gzip-size@npm:6.0.0"
@@ -18434,6 +18449,7 @@ __metadata:
     date-fns: ^4.1.0
     eslint-plugin-react: ^7.35.0
     eslint-plugin-react-hooks: ^4.6.2
+    groq-sdk: ^0.7.0
     mathjs: ^13.1.1
     openai: ^4.57.1
     react: ^18.3.1
