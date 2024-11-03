@@ -637,7 +637,7 @@ function ChatInterface() {
         messages: [
           { 
             role: "system",
-            content: `You are Xade AI's data fetcher. Your only role is to identify and fetch the relevant data based on the user's question. Do not perform any calculations or analysis.
+            content: `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
 
 The user's wallet addresses are: ${portfolioAddresses.join(', ')}
 
@@ -676,7 +676,12 @@ Available functions:
   - priceHistoryData(token, period) - returns array of {date, price} objects
   - getHistoricPortfolioData(addresses, period) - returns {wallet, wallets, currentBalance, balanceHistory}
   Periods can be "1d", "7d", "30d", "1y"
-
+- getPriceAtDateTime(token, timestamp) - returns price at specific date/time
+- getPriceGrowth(token, fromTimestamp, toTimestamp) - returns price growth between dates
+- getTechnicalAnalysis(token, period) - returns technical indicators and trend analysis
+- getPortfolioAtDateTime(addresses, timestamp) - returns portfolio value at specific date/time
+- getPortfolioTrends(addresses, period) - returns portfolio trend analysis
+- getPortfolioGrowth(addresses, fromTimestamp, toTimestamp) - returns portfolio growth between dates
 - Wallet Analysis:
   - getWalletPortfolio(address) - returns detailed wallet information:
     {
@@ -857,6 +862,8 @@ return data;
         'rank', 'totalSupply', 'circulatingSupply', 'website', 'twitter', 'telegram',
         'discord', 'description', 'portfolioData', 'renderCryptoPanicNews',
         'historicPortfolioData', 'getNews', 'portfolioAddresses',
+        'getPriceAtDateTime', 'getPriceGrowth', 'getTechnicalAnalysis',
+        'getPortfolioAtDateTime', 'getPortfolioTrends', 'getPortfolioGrowth',
         wrappedCode
       );
 
@@ -868,7 +875,9 @@ return data;
         priceChange1h, priceChange7d, priceChange1m, priceChange1y, ath, atl,
         rank, totalSupply, circulatingSupply, website, twitter, telegram,
         discord, description, portfolioData, renderCryptoPanicNews,
-        historicPortfolioData, getNews, portfolioAddresses
+        historicPortfolioData, getNews, portfolioAddresses,
+        getPriceAtDateTime, getPriceGrowth, getTechnicalAnalysis,
+        getPortfolioAtDateTime, getPortfolioTrends, getPortfolioGrowth
       );
 
       if (result === undefined) {
@@ -1284,6 +1293,211 @@ return data;
 
   const handleRemoveWalletAddress = (index) => {
     setPortfolioAddresses(portfolioAddresses.filter((_, i) => i !== index));
+  };
+
+  // Add these new functions after the existing helper functions and before the return statement
+  const getPriceAtDateTime = async (token, timestamp) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getPriceHistory(normalizedToken);
+    
+    if (!data) return 'N/A';
+    
+    // Find the closest price point to the requested timestamp
+    const closest = data.reduce((prev, curr) => {
+      return Math.abs(curr.timestamp - timestamp) < Math.abs(prev.timestamp - timestamp) ? curr : prev;
+    });
+    
+    return closest ? `$${closest.price.toFixed(2)}` : 'N/A';
+  };
+
+  const getPriceGrowth = async (token, fromTimestamp, toTimestamp = Date.now()) => {
+    const normalizedToken = getTokenName(token);
+    const data = await getPriceHistory(normalizedToken);
+    
+    if (!data) return 'N/A';
+    
+    const startPrice = data.find(point => Math.abs(point.timestamp - fromTimestamp) < 24 * 60 * 60 * 1000);
+    const endPrice = data.find(point => Math.abs(point.timestamp - toTimestamp) < 24 * 60 * 60 * 1000);
+    
+    if (!startPrice || !endPrice) return 'N/A';
+    
+    const growthPercent = ((endPrice.price - startPrice.price) / startPrice.price) * 100;
+    return {
+      startPrice: `$${startPrice.price.toFixed(2)}`,
+      endPrice: `$${endPrice.price.toFixed(2)}`,
+      growthPercent: `${growthPercent.toFixed(2)}%`,
+      absoluteGrowth: `$${(endPrice.price - startPrice.price).toFixed(2)}`
+    };
+  };
+
+  const getTechnicalAnalysis = async (token, period = '30d') => {
+    const normalizedToken = getTokenName(token);
+    const data = await getPriceHistory(normalizedToken, period);
+    
+    if (!data || data.length < 14) return 'Insufficient data for analysis';
+
+    // Calculate basic technical indicators
+    const prices = data.map(point => point.price);
+    const sma14 = calculateSMA(prices, 14);
+    const rsi14 = calculateRSI(prices, 14);
+    const macd = calculateMACD(prices);
+    
+    return {
+      sma14: sma14.toFixed(2),
+      rsi14: rsi14.toFixed(2),
+      macd: {
+        macdLine: macd.macdLine.toFixed(2),
+        signalLine: macd.signalLine.toFixed(2),
+        histogram: macd.histogram.toFixed(2)
+      },
+      trend: determineTrend(sma14, rsi14, macd)
+    };
+  };
+
+  const getPortfolioAtDateTime = async (addresses, timestamp) => {
+    try {
+      // Fetch portfolio history for a wider range to ensure we have the data point
+      const data = await getHistoricPortfolioData(addresses, '1y');
+      if (!data || !data.balanceHistory) return 'N/A';
+      
+      // Find the closest data point to the requested timestamp
+      const closest = data.balanceHistory.reduce((prev, curr) => {
+        return Math.abs(curr.timestamp - timestamp) < Math.abs(prev.timestamp - timestamp) ? curr : prev;
+      });
+      
+      return closest ? {
+        timestamp: new Date(closest.timestamp).toISOString(),
+        balance: `$${closest.balance.toFixed(2)}`
+      } : 'N/A';
+    } catch (error) {
+      console.error('Error in getPortfolioAtDateTime:', error);
+      return 'Error fetching portfolio data';
+    }
+  };
+
+  const getPortfolioTrends = async (addresses, period = '30d') => {
+    try {
+      const data = await getHistoricPortfolioData(addresses, period);
+      if (!data || !data.balanceHistory) return 'N/A';
+      
+      const balances = data.balanceHistory.map(point => point.balance);
+      const timestamps = data.balanceHistory.map(point => point.timestamp);
+      
+      return {
+        startBalance: `$${balances[0].toFixed(2)}`,
+        currentBalance: `$${balances[balances.length - 1].toFixed(2)}`,
+        highestBalance: `$${Math.max(...balances).toFixed(2)}`,
+        lowestBalance: `$${Math.min(...balances).toFixed(2)}`,
+        volatility: calculateVolatility(balances),
+        trend: calculateTrend(balances)
+      };
+    } catch (error) {
+      console.error('Error in getPortfolioTrends:', error);
+      return 'Error analyzing portfolio trends';
+    }
+  };
+
+  const getPortfolioGrowth = async (addresses, fromTimestamp, toTimestamp = Date.now()) => {
+    try {
+      const data = await getHistoricPortfolioData(addresses, '1y');
+      if (!data || !data.balanceHistory) return 'N/A';
+      
+      const startBalance = data.balanceHistory.find(point => 
+        Math.abs(point.timestamp - fromTimestamp) < 24 * 60 * 60 * 1000
+      );
+      const endBalance = data.balanceHistory.find(point => 
+        Math.abs(point.timestamp - toTimestamp) < 24 * 60 * 60 * 1000
+      );
+      
+      if (!startBalance || !endBalance) return 'N/A';
+      
+      const growthPercent = ((endBalance.balance - startBalance.balance) / startBalance.balance) * 100;
+      
+      return {
+        startBalance: `$${startBalance.balance.toFixed(2)}`,
+        endBalance: `$${endBalance.balance.toFixed(2)}`,
+        growthPercent: `${growthPercent.toFixed(2)}%`,
+        absoluteGrowth: `$${(endBalance.balance - startBalance.balance).toFixed(2)}`
+      };
+    } catch (error) {
+      console.error('Error in getPortfolioGrowth:', error);
+      return 'Error calculating portfolio growth';
+    }
+  };
+
+  // Helper functions for technical analysis
+  const calculateSMA = (prices, period) => {
+    const sum = prices.slice(-period).reduce((a, b) => a + b, 0);
+    return sum / period;
+  };
+
+  const calculateRSI = (prices, period) => {
+    let gains = 0;
+    let losses = 0;
+    
+    for (let i = prices.length - period; i < prices.length; i++) {
+      const difference = prices[i] - prices[i - 1];
+      if (difference >= 0) {
+        gains += difference;
+      } else {
+        losses -= difference;
+      }
+    }
+    
+    const avgGain = gains / period;
+    const avgLoss = losses / period;
+    const rs = avgGain / avgLoss;
+    return 100 - (100 / (1 + rs));
+  };
+
+  const calculateMACD = (prices) => {
+    const ema12 = calculateEMA(prices, 12);
+    const ema26 = calculateEMA(prices, 26);
+    const macdLine = ema12 - ema26;
+    const signalLine = calculateEMA([macdLine], 9);
+    const histogram = macdLine - signalLine;
+    
+    return { macdLine, signalLine, histogram };
+  };
+
+  const calculateEMA = (prices, period) => {
+    const multiplier = 2 / (period + 1);
+    let ema = prices[0];
+    
+    for (let i = 1; i < prices.length; i++) {
+      ema = (prices[i] - ema) * multiplier + ema;
+    }
+    
+    return ema;
+  };
+
+  const determineTrend = (sma, rsi, macd) => {
+    let signals = [];
+    
+    if (rsi > 70) signals.push('Overbought');
+    else if (rsi < 30) signals.push('Oversold');
+    
+    if (macd.macdLine > macd.signalLine) signals.push('Bullish MACD Crossover');
+    else if (macd.macdLine < macd.signalLine) signals.push('Bearish MACD Crossover');
+    
+    return signals.join(', ') || 'Neutral';
+  };
+
+  const calculateVolatility = (values) => {
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const squaredDiffs = values.map(value => Math.pow(value - mean, 2));
+    const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
+    return Math.sqrt(variance);
+  };
+
+  const calculateTrend = (values) => {
+    const firstValue = values[0];
+    const lastValue = values[values.length - 1];
+    const change = ((lastValue - firstValue) / firstValue) * 100;
+    
+    if (change > 5) return 'Upward';
+    if (change < -5) return 'Downward';
+    return 'Sideways';
   };
 
   return (
