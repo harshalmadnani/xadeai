@@ -271,13 +271,9 @@ function ChatInterface() {
     walletPortfolio: null,
   });
   useEffect(() => {
-    fetchPriceHistory(selectedCoin);
-    fetchCryptoPanicData(selectedCoin);
-    fetchMarketData(selectedCoin);
-    fetchMetadata(selectedCoin);
     fetchHistoricPortfolioData();
     fetchWalletPortfolio();
-  }, [selectedCoin, walletAddresses]);
+  }, [walletAddresses]);
   // Add a new state for error snackbar
   const [errorSnackbar, setErrorSnackbar] = useState({ open: false, message: '' });
 
@@ -362,10 +358,21 @@ function ChatInterface() {
     setFilteredCoins(filtered);
   }, [searchTerm]);
 
-  // Modify the fetch functions to use try-catch and update error state
+  // Add the getTokenName function
+  const getTokenName = (input) => {
+    const lowercaseInput = input.toLowerCase();
+    const matchedCoin = coins.find(coin => 
+      coin.name.toLowerCase() === lowercaseInput || 
+      coin.symbol.toLowerCase() === lowercaseInput
+    );
+    return matchedCoin ? matchedCoin.name.toLowerCase() : input.toLowerCase();
+  };
+
+  // Update the data fetching functions to use getTokenName
   const fetchPriceHistory = async (coinname = selectedCoin, from = null, to = null) => {
     try {
-      if (!coinname) {
+      const normalizedCoinName = getTokenName(coinname);
+      if (!normalizedCoinName) {
         console.error('Attempted to fetch price history with undefined coinname');
         setErrorSnackbar({
           open: true,
@@ -377,11 +384,11 @@ function ChatInterface() {
       to = to || Date.now();
       from = from || to - 365 * 24 * 60 * 60 * 1000; // Default to 1 year if not provided
 
-      console.log(`Fetching price history for ${coinname} from ${new Date(from)} to ${new Date(to)}...`);
+      console.log(`Fetching price history for ${normalizedCoinName} from ${new Date(from)} to ${new Date(to)}...`);
 
       const response = await axios.get(`https://api.mobula.io/api/1/market/history`, {
         params: {
-          asset: coinname,
+          asset: normalizedCoinName,
           from: from,
           to: to,
         },
@@ -393,9 +400,9 @@ function ChatInterface() {
       if (response.data && response.data.data && response.data.data.price_history) {
         setPriceHistoryData(prevData => ({ 
           ...prevData, 
-          [coinname]: response.data.data.price_history
+          [normalizedCoinName]: response.data.data.price_history
         }));
-        console.log(`Price history for ${coinname} updated successfully.`);
+        console.log(`Price history for ${normalizedCoinName} updated successfully.`);
       } else {
         console.error('Invalid price history data structure:', response.data);
         throw new Error('Invalid price history data structure');
@@ -412,7 +419,8 @@ function ChatInterface() {
 
   const fetchCryptoPanicData = async (coinname) => {
     try {
-      if (!coinname) {
+      const normalizedCoinName = getTokenName(coinname);
+      if (!normalizedCoinName) {
         console.error('Attempted to fetch CryptoPanic data with undefined coinname');
         setErrorSnackbar({
           open: true,
@@ -421,12 +429,12 @@ function ChatInterface() {
         return;
       }
 
-      const coin = coins.find(c => c.name.toLowerCase() === coinname.toLowerCase());
+      const coin = coins.find(c => c.name.toLowerCase() === normalizedCoinName.toLowerCase());
       if (!coin) {
-        throw new Error(`Coin not found: ${coinname}`);
+        throw new Error(`Coin not found: ${normalizedCoinName}`);
       }
 
-      console.log(`Fetching CryptoPanic data for ${coinname} (${coin.symbol})...`);
+      console.log(`Fetching CryptoPanic data for ${normalizedCoinName} (${coin.symbol})...`);
       const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/`, {
         params: {
           auth_token: '2c962173d9c232ada498efac64234bfb8943ba70',
@@ -444,10 +452,10 @@ function ChatInterface() {
           ...prevData, 
           cryptoPanicNews: { 
             ...prevData.cryptoPanicNews, 
-            [coinname]: newsItems 
+            [normalizedCoinName]: newsItems 
           } 
         }));
-        console.log(`CryptoPanic data for ${coinname} updated successfully.`);
+        console.log(`CryptoPanic data for ${normalizedCoinName} updated successfully.`);
       } else {
         console.error('Invalid CryptoPanic data structure:', response.data);
         throw new Error('Invalid CryptoPanic data structure');
@@ -463,18 +471,19 @@ function ChatInterface() {
   };
 
   const fetchMarketData = async (coinname) => {
-    if (!coinname) {
-      console.error('Attempted to fetch market data with undefined coinname');
-      setErrorSnackbar({
-        open: true,
-        message: 'Cannot fetch market data: Coin name is undefined'
-      });
-      return;
-    }
-
     try {
-      console.log(`Fetching market data for ${coinname}...`);
-      const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${coinname}`, {
+      const normalizedCoinName = getTokenName(coinname);
+      if (!normalizedCoinName) {
+        console.error('Attempted to fetch market data with undefined coinname');
+        setErrorSnackbar({
+          open: true,
+          message: 'Cannot fetch market data: Coin name is undefined'
+        });
+        return null;
+      }
+
+      console.log(`Fetching market data for ${normalizedCoinName}...`);
+      const response = await axios.get(`https://api.mobula.io/api/1/market/data?asset=${normalizedCoinName}`, {
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
@@ -483,11 +492,8 @@ function ChatInterface() {
       console.log('Response received:', response);
 
       if (response.data && response.data.data) {
-        setMarketData(prevData => ({
-          ...prevData,
-          [coinname]: response.data.data
-        }));
-        console.log(`Market data for ${coinname} updated successfully.`);
+        console.log(`Market data for ${normalizedCoinName} fetched successfully.`);
+        return response.data.data;
       } else {
         console.error('Invalid market data structure:', response.data);
         throw new Error('Invalid market data structure');
@@ -499,43 +505,51 @@ function ChatInterface() {
         open: true, 
         message: `Failed to fetch market data for ${coinname}: ${error.message}`
       });
+      return null;
     }
   };
 
   // Function to get market data for a specific coin
   const getMarketData = async (token) => {
     if (!marketData[token]) {
-      await fetchMarketData(token);
+      const data = await fetchMarketData(token);
+      console.log('*****Market data*****:', data);
+      if (data) {
+        setMarketData(prevData => ({
+          ...prevData,
+          [token]: data
+        }));
+      console.log('*****Market data*****:', data);
+      }
+      return data;
     }
+    console.log('*****Market data*****:', data);
     return marketData[token] || null;
   };
 
-  const fetchMetadata = async (coinname) => {
-    if (!coinname) {
-      console.error('Attempted to fetch metadata with undefined coinname');
-      setErrorSnackbar({
-        open: true,
-        message: 'Cannot fetch metadata: Coin name is undefined'
-      });
-      return;
-    }
 
+  const fetchMetadata = async (coinname) => {
     try {
-      console.log(`Fetching metadata for ${coinname}...`);
-      const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${coinname}`, {
+      const normalizedCoinName = getTokenName(coinname);
+      if (!normalizedCoinName) {
+        console.error('Attempted to fetch metadata with undefined coinname');
+        setErrorSnackbar({
+          open: true,
+          message: 'Cannot fetch metadata: Coin name is undefined'
+        });
+        return null;
+      }
+
+      console.log(`Fetching metadata for ${normalizedCoinName}...`);
+      const response = await axios.get(`https://api.mobula.io/api/1/metadata?asset=${normalizedCoinName}`, {
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
       
-      console.log('Metadata response received:', response);
-
       if (response.data && response.data.data) {
-        setMetadata(prevData => ({
-          ...prevData,
-          [coinname]: response.data.data
-        }));
-        console.log(`Metadata for ${coinname} updated successfully.`);
+        console.log(`Metadata for ${normalizedCoinName} fetched successfully.`);
+        return response.data.data;
       } else {
         console.error('Invalid metadata structure:', response.data);
         throw new Error('Invalid metadata structure');
@@ -547,42 +561,56 @@ function ChatInterface() {
         open: true, 
         message: `Failed to fetch metadata for ${coinname}: ${error.message}`
       });
+      return null;
     }
   };
 
   // Add a function to get metadata for a specific coin
   const getMetadata = async (token) => {
     if (!metadata[token]) {
-      await fetchMetadata(token);
+      const data = await fetchMetadata(token);
+      console.log('Metadata fetched:', data);
+      if (data) {
+        setMetadata(prevData => ({
+          ...prevData,
+          [token]: data
+        }));
+      }
+      return data;
     }
     return metadata[token] || null;
   };
 
   const fetchHistoricPortfolioData = async (from = null, to = null, addresses = walletAddresses) => {
+    if (!addresses || addresses.length === 0) {
+      console.error('Attempted to fetch historic portfolio data with no addresses');
+      setErrorSnackbar({
+        open: true,
+        message: 'Cannot fetch historic portfolio data: No wallet addresses provided'
+      });
+      return null;
+    }
+
     try {
       to = to || Date.now();
-      from = from || to - 365 * 24 * 60 * 60 * 1000; // Default to 1 year if not provided
+      from = from || to - 365 * 24 * 60 * 60 * 1000;
 
-      const url = `https://api.mobula.io/api/1/wallet/history`;
-      const params = new URLSearchParams({
-        wallets: addresses.join(','),
-        from: from,
-        to: to
-      });
-
-      console.log(`Fetching historic portfolio data from: ${url}?${params.toString()}`);
-
-      const response = await axios.get(url, {
-        params: params,
+      console.log(`Fetching historic portfolio data for addresses: ${addresses.join(', ')}`);
+      const response = await axios.get(`https://api.mobula.io/api/1/wallet/history`, {
+        params: {
+          wallets: addresses.join(','),
+          from: from,
+          to: to
+        },
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
 
       if (response.data) {
+        console.log('Historic portfolio data fetched successfully');
         setHistoricPortfolioData(response.data);
-        console.log('Historic portfolio data updated successfully.');
-        return response.data;  // Return the data
+        return response.data;
       } else {
         throw new Error('Invalid historic portfolio data structure');
       }
@@ -593,32 +621,37 @@ function ChatInterface() {
         open: true, 
         message: `Failed to fetch historic portfolio data: ${error.message}`
       });
-      return null;  // Return null on error
+      return null;
     }
   };
 
   const fetchWalletPortfolio = async (addresses = walletAddresses) => {
+    if (!addresses || addresses.length === 0) {
+      console.error('Attempted to fetch wallet portfolio with no addresses');
+      setErrorSnackbar({
+        open: true,
+        message: 'Cannot fetch wallet portfolio: No wallet addresses provided'
+      });
+      return null;
+    }
+
     setIsWalletPortfolioLoading(true);
     try {
-      const url = `https://api.mobula.io/api/1/wallet/multi-portfolio`;
-      const params = new URLSearchParams({
-        wallets: addresses.join(',')
-      });
-
-      console.log(`Fetching wallet portfolio from: ${url}?${params.toString()}`);
-
-      const response = await axios.get(url, {
-        params: params,
+      console.log(`Fetching wallet portfolio for addresses: ${addresses.join(', ')}`);
+      const response = await axios.get(`https://api.mobula.io/api/1/wallet/multi-portfolio`, {
+        params: {
+          wallets: addresses.join(',')
+        },
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
         }
       });
       
-      console.log('Wallet portfolio response:', response.data);
-      
       if (response.data && response.data.data && response.data.data[0]) {
+        console.log('Wallet portfolio fetched successfully');
         const portfolioData = response.data.data[0];
         
+        // Update all related states
         setTotalWalletBalance(portfolioData.total_wallet_balance);
         setWalletAddresses(portfolioData.wallets);
         setTotalRealizedPNL(portfolioData.total_realized_pnl);
@@ -626,19 +659,18 @@ function ChatInterface() {
         setAssets(portfolioData.assets);
         setTotalPNLHistory(portfolioData.total_pnl_history);
         
-        // Log the assets array
-        console.log('Assets:', portfolioData.assets);
-        
-        setData(prevData => ({ ...prevData, walletPortfolio: response.data }));
-        return response.data;  // Return the data
+        return response.data;
       } else {
         throw new Error('Invalid wallet portfolio data structure');
       }
     } catch (error) {
       console.error('Error fetching wallet portfolio:', error);
       console.error('Error details:', error.response?.data || error.message);
-      setErrorSnackbar({ open: true, message: `Failed to fetch wallet portfolio: ${error.message}` });
-      return null;  // Return null on error
+      setErrorSnackbar({ 
+        open: true, 
+        message: `Failed to fetch wallet portfolio: ${error.message}`
+      });
+      return null;
     } finally {
       setIsWalletPortfolioLoading(false);
     }
@@ -651,7 +683,6 @@ function ChatInterface() {
 
   const callOpenAIAPI = async (userInput) => {
     try {
-      // Prepare the portfolio data
       const portfolioData = {
         balance: portfolioBalance,
         realizedPNL: portfolioRealizedPNL,
@@ -665,63 +696,29 @@ function ChatInterface() {
         messages: [
           { 
             role: "system",
-            content: `You are Xade AI, a trading assistant with access to real-time financial data and wallet information. Before performing any operations, The coinName should be lowercase.
+            content: `You are Xade AI's data fetcher. Your only role is to identify and fetch the relevant data based on the user's question. Do not perform any analysis or calculations.
 
-You have access to the following data where token is the coin name:
+Available functions:
+- Market Data: price(), volume(), marketCap(), marketCapDiluted(), liquidity(), liquidityChange24h(), offChainVolume(), volume7d(), volumeChange24h(), isListed(), priceChange24h(), priceChange1h(), priceChange7d(), priceChange1m(), priceChange1y(), ath(), atl(), rank(), totalSupply(), circulatingSupply()
+- Social/Info: website(), twitter(), telegram(), discord(), description(), getNews()
+- Historical: priceHistoryData()
+- Portfolio: portfolioData.balance, portfolioData.realizedPNL, portfolioData.unrealizedPNL, portfolioData.assetsList, portfolioData.pnlTimelines
 
-price(token)
-volume(token)
-marketCap(token)
-marketCapDiluted(token)
-liquidity(token)
-liquidityChange24h(token)
-offChainVolume(token)
-volume7d(token)
-volumeChange24h(token)
-isListed(token)
-priceChange24h(token)
-priceChange1h(token)
-priceChange7d(token)
-priceChange1m(token)
-priceChange1y(token)
-ath(token)
-atl(token)
-rank(token)
-totalSupply(token)
-circulatingSupply(token)
+Instructions:
+1. Return only the raw data needed to answer the user's question
+2. Do not perform any calculations or analysis
+3. Format your response as JavaScript code that calls the necessary functions
+4. Always return the fetched data as a structured object
 
-website(token)
-twitter(token)
-telegram(token)
-discord(token)
-description(token)  
-
-priceHistoryData(token)
-
-You also have access to the following portfolio-related data:
-
-portfolioData?.balance: The total balance of the user's portfolio.
-portfolioData?.realizedPNL: The total realized Profit and Loss of the portfolio.
-portfolioData?.unrealizedPNL: The total unrealized Profit and Loss of the portfolio.
-
-portfolioData?.assetsList: An array of objects containing details about each asset in the portfolio. Each object has the following properties:
-  - name: The name of the asset
-  - symbol: The symbol of the asset
-  - balance: The balance of the asset
-  - value: The estimated value of the asset in USD
-
-portfolioData?.pnlTimelines: An object containing PNL data for different time periods. It has the following structure:
-  - '24h': { realized: [value], unrealized: [value] }
-  - '7d': { realized: [value], unrealized: [value] }
-  - '30d': { realized: [value], unrealized: [value] }
-  - '1y': { realized: [value], unrealized: [value] }
-
-To use this data in your responses, you should generate JavaScript code that accesses and processes this data as needed. The code you generate will be executed by our system to provide the answer. Please format your response as follows:
-1. Include the JavaScript code within a code block, starting with \`\`\`javascript and ending with \`\`\`.
-2. The last line of your code should return the processed data.
-3. Don't show any comments.
-4. Always use optional chaining (?.) when accessing object properties.
-5.Always return a value.`
+Example format:
+\`\`\`javascript
+const data = {
+  price: price("bitcoin"),
+  volume: volume("bitcoin")
+};
+return data;
+\`\`\`
+`
           },
           { 
             role: "user", 
@@ -825,12 +822,25 @@ To use this data in your responses, you should generate JavaScript code that acc
   // Function to execute the code generated by GPT
   const executeCode = async (code) => {
     try {
+      // Create portfolioData object from existing state variables
+      const portfolioData = {
+        balance: portfolioBalance,
+        realizedPNL: portfolioRealizedPNL,
+        unrealizedPNL: portfolioUnrealizedPNL,
+        assetsList: portfolioAssetsList,
+        pnlTimelines: portfolioPNLTimelines
+      };
+
       const wrappedCode = code.includes('function') ? code : `async function executeAICode() {\n${code}\n}\nexecuteAICode();`;
       
       const func = new Function(
         'data', 'selectedCoin', 'setSelectedCoin', 'getMarketData', 'getMetadata',
-        'price', 'volume', 'marketCap', 'website', 'twitter', 'telegram', 'discord', 'description',
-        'portfolioData', 'renderCryptoPanicNews', 'historicPortfolioData',
+        'price', 'volume', 'marketCap', 'marketCapDiluted', 'liquidity', 'liquidityChange24h',
+        'offChainVolume', 'volume7d', 'volumeChange24h', 'isListed', 'priceChange24h',
+        'priceChange1h', 'priceChange7d', 'priceChange1m', 'priceChange1y', 'ath', 'atl',
+        'rank', 'totalSupply', 'circulatingSupply', 'website', 'twitter', 'telegram',
+        'discord', 'description', 'portfolioData', 'renderCryptoPanicNews',
+        'historicPortfolioData', 'getNews',
         `
           const { priceHistoryData, cryptoPanicNews, historicPortfolioData: historicData, walletPortfolio } = data;
           
@@ -847,6 +857,74 @@ To use this data in your responses, you should generate JavaScript code that acc
             },
             marketCap: async (token) => {
               const result = await marketCap(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            marketCapDiluted: async (token) => {
+              const result = await marketCapDiluted(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            liquidity: async (token) => {
+              const result = await liquidity(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            liquidityChange24h: async (token) => {
+              const result = await liquidityChange24h(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            offChainVolume: async (token) => {
+              const result = await offChainVolume(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            volume7d: async (token) => {
+              const result = await volume7d(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            volumeChange24h: async (token) => {
+              const result = await volumeChange24h(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            isListed: async (token) => {
+              const result = await isListed(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            priceChange24h: async (token) => {
+              const result = await priceChange24h(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            priceChange1h: async (token) => {
+              const result = await priceChange1h(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            priceChange7d: async (token) => {
+              const result = await priceChange7d(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            priceChange1m: async (token) => {
+              const result = await priceChange1m(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            priceChange1y: async (token) => {
+              const result = await priceChange1y(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            ath: async (token) => {
+              const result = await ath(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            atl: async (token) => {
+              const result = await atl(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            rank: async (token) => {
+              const result = await rank(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            totalSupply: async (token) => {
+              const result = await totalSupply(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            },
+            circulatingSupply: async (token) => {
+              const result = await circulatingSupply(token);
               return isLoaded(result) ? result : 'please resend the prompt';
             },
             website: async (token) => {
@@ -871,10 +949,14 @@ To use this data in your responses, you should generate JavaScript code that acc
             },
             priceHistoryData: async (token) => priceHistoryData?.[token] || 'please resend the prompt',
             renderCryptoPanicNews: async (token) => renderCryptoPanicNews(token) || 'please resend the prompt',
+            getNews: async (token) => {
+              const result = await getNews(token);
+              return isLoaded(result) ? result : 'please resend the prompt';
+            }
           };
 
           const finalCode = \`${wrappedCode}\`.replace(
-            /(price|volume|marketCap|website|twitter|telegram|discord|description|priceHistoryData|renderCryptoPanicNews)\\(/g,
+            /(price|volume|marketCap|marketCapDiluted|liquidity|liquidityChange24h|offChainVolume|volume7d|volumeChange24h|isListed|priceChange24h|priceChange1h|priceChange7d|priceChange1m|priceChange1y|ath|atl|rank|totalSupply|circulatingSupply|website|twitter|telegram|discord|description|priceHistoryData|renderCryptoPanicNews|getNews)\\(/g,
             'await wrappedFunctions.$1('
           );
 
@@ -884,24 +966,20 @@ To use this data in your responses, you should generate JavaScript code that acc
       
       const result = await func(
         data, selectedCoin, setSelectedCoin, getMarketData, getMetadata,
-        price, volume, marketCap, website, twitter, telegram, discord, description,
-        {
-          balance: portfolioBalance,
-          realizedPNL: portfolioRealizedPNL,
-          unrealizedPNL: portfolioUnrealizedPNL,
-          assetsList: portfolioAssetsList,
-          pnlTimelines: portfolioPNLTimelines
-        },
-        renderCryptoPanicNews, historicPortfolioData
+        price, volume, marketCap, marketCapDiluted, liquidity, liquidityChange24h,
+        offChainVolume, volume7d, volumeChange24h, isListed, priceChange24h,
+        priceChange1h, priceChange7d, priceChange1m, priceChange1y, ath, atl,
+        rank, totalSupply, circulatingSupply, website, twitter, telegram,
+        discord, description, portfolioData, renderCryptoPanicNews,
+        historicPortfolioData, getNews
       );
       
       if (result === undefined) {
         throw new Error('Execution result is undefined. Make sure the code returns a value.');
       }
       
-      // Remove extra quotes from string results
       if (typeof result === 'string') {
-        return result.replace(/^"|"$/g, '' );
+        return result.replace(/^"|"$/g, '');
       }
       
       return JSON.stringify(result, null, 2);
@@ -1039,104 +1117,130 @@ To use this data in your responses, you should generate JavaScript code that acc
 
   // Modify these functions to return Promises
   const website = async (token) => {
-    const metadata = await getMetadata(token);
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
     return metadata?.website || 'N/A';
   };
   const twitter = async (token) => {
-    const metadata = await getMetadata(token);
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
     return metadata?.twitter || 'N/A';
   };
   const telegram = async (token) => {
-    const metadata = await getMetadata(token);
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
     return metadata?.telegram || 'N/A';
   };
   const discord = async (token) => {
-    const metadata = await getMetadata(token);
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
     return metadata?.discord || 'N/A';
   };
   const description = async (token) => {
-    const metadata = await getMetadata(token);
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
     return metadata?.description || 'N/A';
   };
   const price = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
+    console.log('*****Price*****:', data);
     if (!data) return 'please resend the prompt';
     return data.price !== undefined ? `$${data.price.toFixed(2)}` : 'N/A';
   };
   const volume = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return data?.volume !== undefined ? `$${data.volume.toFixed(2)}` : 'N/A';
   };
   const marketCap = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return data?.market_cap !== undefined ? `$${data.market_cap.toFixed(2)}` : 'N/A';
   };
   const marketCapDiluted = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `$${data?.market_cap_diluted?.toFixed(2) || 'N/A'}`;
   };
   const liquidity = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `$${data?.liquidity?.toFixed(2) || 'N/A'}`;
   };
   const liquidityChange24h = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `${data?.liquidity_change_24h?.toFixed(2) || 'N/A'}%`;
   };
   const offChainVolume = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `$${data?.off_chain_volume?.toFixed(2) || 'N/A'}`;
   };
   const volume7d = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `$${data?.volume_7d?.toFixed(2) || 'N/A'}`;
   };
   const volumeChange24h = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `${data?.volume_change_24h?.toFixed(2) || 'N/A'}%`;
   };
   const isListed = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return data?.is_listed ? 'Yes' : 'No';
   };
   const priceChange24h = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `${data?.price_change_24h?.toFixed(2) || 'N/A'}%`;
   };
   const priceChange1h = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `${data?.price_change_1h?.toFixed(2) || 'N/A'}%`;
   };
   const priceChange7d = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `${data?.price_change_7d?.toFixed(2) || 'N/A'}%`;
   };
   const priceChange1m = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `${data?.price_change_1m?.toFixed(2) || 'N/A'}%`;
   };
   const priceChange1y = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `${data?.price_change_1y?.toFixed(2) || 'N/A'}%`;
   };
   const ath = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `$${data?.ath?.toFixed(2) || 'N/A'}`;
   };
   const atl = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return `$${data?.atl?.toFixed(2) || 'N/A'}`;
   };
   const rank = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return data?.rank || 'N/A';
   };
   const totalSupply = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return data?.total_supply || 'N/A';
   };
   const circulatingSupply = async (token) => {
-    const data = await getMarketData(token);
+    const normalizedToken = getTokenName(token);
+    const data = await getMarketData(normalizedToken);
     return data?.circulating_supply || 'N/A';
   };
   const renderCryptoPanicNews = (coinname) => {
@@ -1219,6 +1323,62 @@ To use this data in your responses, you should generate JavaScript code that acc
 
   const handleCloseAnnouncement = () => {
     setShowAnnouncement(false);
+  };
+
+  const fetchCryptoPanicNews = async (coinname) => {
+    try {
+      const normalizedCoinName = getTokenName(coinname);
+      if (!normalizedCoinName) {
+        throw new Error('Invalid coin name');
+      }
+
+      const coin = coins.find(c => c.name.toLowerCase() === normalizedCoinName.toLowerCase());
+      if (!coin) {
+        throw new Error(`Coin not found: ${normalizedCoinName}`);
+      }
+
+      const response = await axios.get(`https://cryptopanic.com/api/free/v1/posts/`, {
+        params: {
+          auth_token: '2c962173d9c232ada498efac64234bfb8943ba70',
+          public: 'true',
+          currencies: coin.symbol
+        }
+      });
+
+      if (!response.data?.results) {
+        throw new Error('Invalid response from CryptoPanic API');
+      }
+
+      const newsItems = response.data.results.map(item => ({
+        title: item.title,
+        url: item.url
+      }));
+
+      return newsItems;
+    } catch (error) {
+      console.error(`Error fetching CryptoPanic news:`, error);
+      throw error;
+    }
+  };
+
+  const getNews = async (token) => {
+    try {
+      const normalizedToken = getTokenName(token);
+      const newsItems = await fetchCryptoPanicNews(normalizedToken);
+      
+      if (!newsItems || newsItems.length === 0) {
+        return 'No news available for this token';
+      }
+
+      // Format news items as a numbered list
+      return newsItems
+        .slice(0, 5) // Limit to 5 news items
+        .map((item, index) => `${index + 1}. ${item.title}`)
+        .join('\n');
+    } catch (error) {
+      console.error('Error in getNews:', error);
+      return `Unable to fetch news: ${error.message}`;
+    }
   };
 
   return (
