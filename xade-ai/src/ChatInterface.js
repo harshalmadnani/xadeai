@@ -148,7 +148,7 @@ function ChatInterface() {
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [walletAddresses, setWalletAddresses] = useState(['0x7e3bbf75aba09833f899bb1fdd917fc3a5617555']);
+  const [walletAddresses, setWalletAddresses] = useState([]);
   const [newWalletAddress, setNewWalletAddress] = useState('');
   const [showPopup, setShowPopup] = useState(false);
   const [selectedToken, setSelectedToken] = useState(coins[0]);
@@ -167,10 +167,6 @@ function ChatInterface() {
     historicPortfolioData: null,
     walletPortfolio: null,
   });
-  useEffect(() => {
-    fetchHistoricPortfolioData();
-    fetchWalletPortfolio();
-  }, [walletAddresses]);
   // Add a new state for error snackbar
   const [errorSnackbar, setErrorSnackbar] = useState({ open: false, message: '' });
 
@@ -522,22 +518,12 @@ function ChatInterface() {
     }
   };
 
-  const fetchWalletPortfolio = async (addresses = walletAddresses) => {
-    if (!addresses || addresses.length === 0) {
-      console.error('Attempted to fetch wallet portfolio with no addresses');
-      setErrorSnackbar({
-        open: true,
-        message: 'Cannot fetch wallet portfolio: No wallet addresses provided'
-      });
-      return null;
-    }
-
-    setIsWalletPortfolioLoading(true);
+  const fetchWalletPortfolio = async (address) => {
     try {
-      console.log(`Fetching wallet portfolio for addresses: ${addresses.join(', ')}`);
+      console.log(`Fetching wallet portfolio for address: ${address}`);
       const response = await axios.get(`https://api.mobula.io/api/1/wallet/multi-portfolio`, {
         params: {
-          wallets: addresses.join(',')
+          wallets: address
         },
         headers: {
           Authorization: 'e26c7e73-d918-44d9-9de3-7cbe55b63b99'
@@ -546,31 +532,33 @@ function ChatInterface() {
       
       if (response.data && response.data.data && response.data.data[0]) {
         console.log('Wallet portfolio fetched successfully');
-        const portfolioData = response.data.data[0];
-        
-        // Update all related states
-        setTotalWalletBalance(portfolioData.total_wallet_balance);
-        setWalletAddresses(portfolioData.wallets);
-        setTotalRealizedPNL(portfolioData.total_realized_pnl);
-        setTotalUnrealizedPNL(portfolioData.total_unrealized_pnl);
-        setAssets(portfolioData.assets);
-        setTotalPNLHistory(portfolioData.total_pnl_history);
-        
-        return response.data;
+        return response.data.data[0];
       } else {
         throw new Error('Invalid wallet portfolio data structure');
       }
     } catch (error) {
       console.error('Error fetching wallet portfolio:', error);
-      console.error('Error details:', error.response?.data || error.message);
-      setErrorSnackbar({ 
-        open: true, 
-        message: `Failed to fetch wallet portfolio: ${error.message}`
-      });
       return null;
-    } finally {
-      setIsWalletPortfolioLoading(false);
     }
+  };
+
+  // Add this new function
+  const getWalletPortfolio = async (address) => {
+    const data = await fetchWalletPortfolio(address);
+    if (!data) return 'Unable to fetch wallet data';
+    
+    return {
+      balance: data.total_wallet_balance?.toFixed(2) || 'N/A',
+      realizedPNL: data.total_realized_pnl?.toFixed(2) || 'N/A',
+      unrealizedPNL: data.total_unrealized_pnl?.toFixed(2) || 'N/A',
+      assets: data.assets?.map(asset => ({
+        name: asset.asset?.name || 'Unknown',
+        symbol: asset.asset?.symbol || 'N/A',
+        balance: asset.token_balance?.toFixed(6) || 'N/A',
+        value: asset.estimated_balance?.toFixed(2) || 'N/A'
+      })) || [],
+      pnlHistory: data.total_pnl_history || {}
+    };
   };
 
   // Function to get data based on the key
@@ -580,32 +568,69 @@ function ChatInterface() {
 
   const callOpenAIAPI = async (userInput) => {
     try {
-      const portfolioData = {
-        balance: portfolioBalance,
-        realizedPNL: portfolioRealizedPNL,
-        unrealizedPNL: portfolioUnrealizedPNL,
-        assetsList: portfolioAssetsList,
-        pnlTimelines: portfolioPNLTimelines
-      };
-
       const response = await openai.chat.completions.create({
         model: "gpt-4o-mini",
         messages: [
           { 
             role: "system",
-            content: `You are Xade AI's data fetcher. Your only role is to identify and fetch the relevant data based on the user's question. Do not perform any analysis or calculations.
+            content: `You are Xade AI's data fetcher. Your only role is to identify and fetch the relevant data based on the user's question. Do not perform any calculations or analysis.
 
 Available functions:
-- Market Data: price(), volume(), marketCap(), marketCapDiluted(), liquidity(), liquidityChange24h(), offChainVolume(), volume7d(), volumeChange24h(), isListed(), priceChange24h(), priceChange1h(), priceChange7d(), priceChange1m(), priceChange1y(), ath(), atl(), rank(), totalSupply(), circulatingSupply()
-- Social/Info: website(), twitter(), telegram(), discord(), description(), getNews()
-- Historical: priceHistoryData(token, period) - returns array of {date, price} objects. Period can be "1d", "7d", "30d", "1y"
-- Portfolio: portfolioData.balance, portfolioData.realizedPNL, portfolioData.unrealizedPNL, portfolioData.assetsList, portfolioData.pnlTimelines
+- Market Data:
+  - price(token) - returns current price in USD
+  - volume(token) - returns 24h volume
+  - marketCap(token) - returns market cap
+  - marketCapDiluted(token) - returns fully diluted market cap
+  - liquidity(token) - returns liquidity
+  - liquidityChange24h(token) - returns 24h liquidity change %
+  - offChainVolume(token) - returns off-chain volume
+  - volume7d(token) - returns 7d volume
+  - volumeChange24h(token) - returns 24h volume change %
+  - isListed(token) - returns listing status
+  - priceChange24h(token) - returns 24h price change %
+  - priceChange1h(token) - returns 1h price change %
+  - priceChange7d(token) - returns 7d price change %
+  - priceChange1m(token) - returns 30d price change %
+  - priceChange1y(token) - returns 1y price change %
+  - ath(token) - returns all-time high price
+  - atl(token) - returns all-time low price
+  - rank(token) - returns market rank
+  - totalSupply(token) - returns total supply
+  - circulatingSupply(token) - returns circulating supply
+
+- Social/Info:
+  - website(token) - returns official website URL
+  - twitter(token) - returns Twitter handle
+  - telegram(token) - returns Telegram group link
+  - discord(token) - returns Discord server link
+  - description(token) - returns project description
+  - getNews(token) - returns latest news articles
+
+- Historical Data:
+  - priceHistoryData(token, period) - returns array of {date, price} objects
+  - getHistoricPortfolioData(addresses, period) - returns {wallet, wallets, currentBalance, balanceHistory}
+  Periods can be "1d", "7d", "30d", "1y"
+
+- Wallet Analysis:
+  - getWalletPortfolio(address) - returns detailed wallet information:
+    {
+      balance: total wallet balance in USD
+      realizedPNL: realized profit/loss
+      unrealizedPNL: unrealized profit/loss
+      assets: [{
+        name: token name
+        symbol: token symbol
+        balance: token amount
+        value: USD value
+      }]
+      pnlHistory: historical PNL data
+    }
 
 Instructions:
 1. Return only the raw data needed to answer the user's question
 2. Do not perform any calculations or analysis
 3. Format your response as JavaScript code that calls the necessary functions
-4. For price history data, always specify the period needed
+4. For historical data, always specify the period needed
 5. Always return the fetched data as a structured object
 
 Example format:
@@ -613,22 +638,16 @@ Example format:
 const data = {
   currentPrice: await price("bitcoin"),
   priceHistory: await priceHistoryData("bitcoin", "30d"),
+  walletData: await getWalletPortfolio("0x123..."),
   news: await getNews("bitcoin")
 };
 return data;
 \`\`\`
 `
           },
-          { 
-            role: "user", 
-            content: userInput 
-          }
+          { role: "user", content: userInput }
         ],
-        temperature: 0.7,
-        max_tokens: 3000,
-        top_p: 1,
-        frequency_penalty: 0,
-        presence_penalty: 0,
+        temperature: 0.7
       });
 
       return response.choices[0].message.content;
@@ -663,19 +682,9 @@ return data;
           const code = codeMatch[1];
           const executionStartTime = Date.now();
           let result;
-          const maxExecutionTime = 5000; // 5 seconds
 
-          const executionPromise = new Promise(async (resolve) => {
-            result = await executeCode(codeMatch[1]);
-            resolve();
-          });
-
-          const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Execution timed out')), maxExecutionTime);
-          });
-
-          await Promise.race([executionPromise, timeoutPromise]);
-
+          // Execute code without timeout
+          result = await executeCode(codeMatch[1]);
           const executionTime = Date.now() - executionStartTime;
 
           console.log('Execution result:', result);
@@ -725,7 +734,6 @@ return data;
         pnlTimelines: portfolioPNLTimelines
       };
 
-      // Create wrapper functions for async operations
       const wrappedFunctions = {
         priceHistoryData: async (token, period = '1y') => {
           const data = await getPriceHistory(token, period);
@@ -734,12 +742,42 @@ return data;
             price: item.price
           }));
         },
-        // ... other existing wrapped functions ...
+        getHistoricPortfolioData: async (addresses, period = '1y') => {
+          // Ensure addresses is an array
+          const addressArray = Array.isArray(addresses) ? addresses : [addresses];
+          if (!addressArray.length) {
+            throw new Error('No wallet addresses provided');
+          }
+          
+          const to = Date.now();
+          const periods = {
+            '1d': 24 * 60 * 60 * 1000,
+            '7d': 7 * 24 * 60 * 60 * 1000,
+            '30d': 30 * 24 * 60 * 60 * 1000,
+            '1y': 365 * 24 * 60 * 60 * 1000
+          };
+          const from = to - (periods[period] || periods['1y']);
+          
+          const data = await fetchHistoricPortfolioData(from, to, addressArray);
+          return data;
+        },
+        getWalletPortfolio: async (address) => {
+          const data = await getWalletPortfolio(address);
+          return data;
+        }
       };
 
       const wrappedCode = `async function executeAICode() {
         const priceHistoryData = async (token, period) => {
           const data = await wrappedFunctions.priceHistoryData(token, period);
+          return data;
+        };
+        const getHistoricPortfolioData = async (addresses, period) => {
+          const data = await wrappedFunctions.getHistoricPortfolioData(addresses, period);
+          return data;
+        };
+        const getWalletPortfolio = async (address) => {
+          const data = await wrappedFunctions.getWalletPortfolio(address);
           return data;
         };
         ${code}
@@ -1195,6 +1233,47 @@ return data;
       return data;
     }
     return priceHistoryData[normalizedToken];
+  };
+
+  const getHistoricPortfolioData = async (addresses, period = '1y') => {
+    try {
+      if (!addresses || addresses.length === 0) {
+        throw new Error('No wallet addresses provided');
+      }
+
+      // Calculate time range based on period
+      const to = Date.now();
+      const periods = {
+        '1d': 24 * 60 * 60 * 1000,
+        '7d': 7 * 24 * 60 * 60 * 1000,
+        '30d': 30 * 24 * 60 * 60 * 1000,
+        '1y': 365 * 24 * 60 * 60 * 1000
+      };
+      const from = to - (periods[period] || periods['1y']);
+
+      // Fetch data using existing fetchHistoricPortfolioData
+      const response = await fetchHistoricPortfolioData(from, to, addresses);
+
+      if (!response || !response.data || !response.data.balance_history) {
+        throw new Error('Invalid response format');
+      }
+
+      // Format the data similar to price history
+      return {
+        wallet: response.data.wallet,
+        wallets: response.data.wallets,
+        currentBalance: response.data.balance_usd,
+        balanceHistory: response.data.balance_history.map(([timestamp, balance]) => ({
+          timestamp,
+          date: new Date(timestamp),
+          balance: parseFloat(balance)
+        }))
+      };
+
+    } catch (error) {
+      console.error('Error in getHistoricPortfolioData:', error);
+      throw error;
+    }
   };
 
   return (
