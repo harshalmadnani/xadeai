@@ -62,13 +62,20 @@ const ChatInterfaceUI = ({
       justifyContent: 'space-between',
     }}>
       <img src='./XADE.png' alt="Xade AI Logo" style={styles.logo} />
-      <IconButton
+      <Button
         onClick={handleOpenWalletDialog}
-        style={{ color: 'white' }}
-        title="Manage Wallet Addresses"
+        variant="outlined"
+        style={{
+          color: 'white',
+          borderColor: 'white',
+          borderRadius: '20px',
+          textTransform: 'none',
+          padding: '4px 20px',
+          fontSize: '14px'
+        }}
       >
-        <AddIcon />
-      </IconButton>
+        Portfolio 
+      </Button>
     </div>
     <div style={styles.messageListContainer}>
       <div style={styles.messageList} ref={messageListRef}>
