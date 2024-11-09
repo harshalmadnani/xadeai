@@ -222,7 +222,6 @@ function ChatInterface() {
   const [inputTokens, setInputTokens] = useState(0);
   const [disclaimerAccepted, setDisclaimerAccepted] = useState(false);
   const [showAnnouncement, setShowAnnouncement] = useState(true);
-
   // Create a data object to store all fetched data
   const [data, setData] = useState({
     priceHistoryData: null,
