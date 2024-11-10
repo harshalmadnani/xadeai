@@ -12,6 +12,10 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { styles } from './ChatInterfaceStyles';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
+import CircularProgress from '@mui/material/CircularProgress';
+import SendIcon from '@mui/icons-material/Send';
+import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
+import WalletIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
 // Create a context for storing fetched data
 const DataContext = createContext(null);
 
@@ -58,67 +62,197 @@ const ChatInterfaceUI = ({
 }) => (
   <div style={styles.chatInterface}>
     {renderDisclaimerDialog()}
-    {/* {showAnnouncement && (
-      <div style={styles.announcementBar}>
-        <span style={styles.announcementText}>Degen AI can take upt!</span>
-        <CloseIcon style={styles.closeButton} onClick={handleCloseAnnouncement} />
-      </div>
-    )} */}
     <div style={{
       ...styles.header,
       justifyContent: 'space-between',
+      padding: '15px 25px',
+      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+      backdropFilter: 'blur(10px)',
+      backgroundColor: 'rgba(0, 0, 0, 0.3)',
     }}>
-      <img src='./XADE.png' alt="Xade AI Logo" style={styles.logo} />
-      <Button
-        onClick={handleOpenWalletDialog}
-        variant="outlined"
-        style={{
-          color: 'white',
-          borderColor: 'white',
-          borderRadius: '20px',
-          textTransform: 'none',
-          padding: '4px 20px',
-          fontSize: '14px'
-        }}
-      >
-        Portfolio 
-      </Button>
-    </div>
-    <div style={styles.messageListContainer}>
-      <div style={styles.messageList} ref={messageListRef}>
-        {messages.map((message, index) => renderMessage(message, index))}
+      <div style={{ display: 'flex', alignItems: 'center' }}>
+        <img 
+          src='./XADE.png' 
+          alt="Xade AI Logo" 
+          style={{ 
+            ...styles.logo, 
+            height: '20px',
+            width: 'auto',
+            objectFit: 'contain'
+          }} 
+        />
+      </div>
+      <div style={{ display: 'flex', gap: '15px' }}>
+        <Button
+          onClick={handleOpenWalletDialog}
+          variant="outlined"
+          style={{
+            color: 'white',
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            borderRadius: '12px',
+            textTransform: 'none',
+            padding: '8px 20px',
+            fontSize: '14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            '&:hover': {
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: 'rgba(255, 255, 255, 0.3)',
+            },
+          }}
+        >
+          Portfolio ({portfolioAddresses.length})
+        </Button>
       </div>
     </div>
-    <form onSubmit={handleSubmit} style={styles.inputForm}>
-      <input
-        type="text"
+
+    <div style={{
+      ...styles.messageListContainer,
+      padding: '20px',
+      background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)'
+    }}>
+      <div style={styles.messageList} ref={messageListRef}>
+        {messages.length === 0 ? (
+          <div style={styles.welcomeMessage}>
+            <Typography variant="h5" style={{ color: 'white', marginBottom: '20px' }}>
+              Welcome to Xade AI! 👋
+            </Typography>
+            <Typography style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '30px' }}>
+              I can help you with:
+            </Typography>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+              gap: '12px',
+              width: '100%',
+              maxWidth: '800px',
+              margin: '0 auto'
+            }}>
+              {[
+                {
+                  question: "Price of Ethereum with the marketcap of Bitcoin?",
+                  icon: "💰"
+                },
+                {
+                  question: "Aptos Investors?",
+                  icon: "🔍"
+                },
+                {
+                  question: "Solana 7d technical Analysis?",
+                  icon: "📊"
+                },
+                {
+                  question: "What is EigenLayer?",
+                  icon: "ℹ️"
+                },
+                {
+                  question: "Latest news about Ethereum?",
+                  icon: "📰"
+                },
+                {
+                  question: "SUI token distribution?",
+                  icon: "📈"
+                }
+              ].map((suggestion, index) => (
+                <Button
+                  key={index}
+                  variant="outlined"
+                  onClick={() => setInput(`Tell me about ${suggestion.question.toLowerCase()}`)}
+                  style={{
+                    color: 'white',
+                    borderColor: 'rgba(255, 255, 255, 0.2)',
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    padding: '16px',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    justifyContent: 'flex-start',
+                    transition: 'all 0.2s ease',
+                    '&:hover': {
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      borderColor: 'rgba(255, 255, 255, 0.3)',
+                      transform: 'translateY(-2px)'
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span style={{ fontSize: '20px' }}>{suggestion.icon}</span>
+                    <span style={{ 
+                      textAlign: 'left',
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      lineHeight: '1.4'
+                    }}>
+                      {suggestion.question}
+                    </span>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          messages.map((message, index) => renderMessage(message, index))
+        )}
+      </div>
+    </div>
+
+    <form onSubmit={handleSubmit} style={{
+      ...styles.inputForm,
+      padding: '20px',
+      borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+    }}>
+      <TextField
+        fullWidth
         value={input}
         onChange={(e) => setInput(e.target.value)}
-        placeholder="Type your message..."
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSubmit(e);
+          }
+        }}
+        placeholder="Ask me anything about crypto..."
         disabled={isLoading}
-        style={styles.input}
+        multiline
+        maxRows={3}
+        InputProps={{
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton 
+                type="submit"
+                disabled={isLoading || !input.trim()}
+                style={{ color: isLoading ? 'rgba(255, 255, 255, 0.3)' : 'white' }}
+              >
+                {isLoading ? <CircularProgress size={24} /> : <SendIcon />}
+              </IconButton>
+            </InputAdornment>
+          ),
+          style: {
+            color: 'white',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            padding: '12px'
+          }
+        }}
+        sx={{
+          '& .MuiOutlinedInput-root': {
+            '& fieldset': { border: 'none' },
+            '&:hover fieldset': { border: 'none' },
+            '&.Mui-focused fieldset': { border: 'none' }
+          }
+        }}
       />
-      <button 
-        type="submit" 
-        disabled={isLoading} 
-        style={{...styles.sendButton, ...(isLoading ? styles.sendButtonDisabled : {})}}
-      >
-        {isLoading ? 'Analyzing...' : 'Send'}
-      </button>
     </form>
-    {error && <div style={styles.error}>{error}</div>}
-    <Snackbar open={errorSnackbar.open} autoHideDuration={6000} onClose={handleCloseErrorSnackbar}>
-      <Alert onClose={handleCloseErrorSnackbar} severity="error" sx={{ width: '100%' }}>
-        {errorSnackbar.message}
-      </Alert>
-    </Snackbar>
+
+    {/* Enhanced Wallet Dialog */}
     <Dialog 
       open={isWalletDialogOpen} 
       onClose={handleCloseWalletDialog}
+      maxWidth="md"
+      fullWidth
       PaperProps={{
         style: {
           backgroundColor: '#1a1a1a',
           color: 'white',
+          borderRadius: '16px'
         }
       }}
     >
@@ -897,29 +1031,34 @@ return data;
     content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     content = content.replace(/###\s*(.*?)\s*(\n|$)/g, '<h3>$1</h3>');
     
-    // Parse the execution result
     const executionResultMatch = content.match(/\*\*Execution Result:\*\*\n```\n([\s\S]*?)\n```/);
     const executionResult = executionResultMatch ? executionResultMatch[1] : null;
     
-    // Check if the execution result is "please resend the prompt"
     if (executionResult === 'please resend the prompt') {
       content = 'Please resend the prompt.';
     } else if (executionResult && executionResult.startsWith('"') && executionResult.endsWith('"')) {
-      // Remove quotes from the execution result if it's a simple string
       content = content.replace(executionResult, executionResult.slice(1, -1));
     }
     
     return (
       <div key={index} style={styles.message}>
-        <div style={{
-          ...styles.avatar,
-          ...(message.role === 'user' ? styles.userAvatar : styles.assistantAvatar)
-        }}>
-          {message.role === 'user' ? 'U' : 'A'}
-        </div>
+        {message.role === 'assistant' && (
+          <img 
+            src='/1.png'
+            alt="Xade AI" 
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              marginRight: '12px'
+            }}
+          />
+        )}
         <div style={{
           ...styles.bubble,
-          ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble)
+          ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble),
+          marginLeft: message.role === 'user' ? 'auto' : '0',
+          marginRight: message.role === 'user' ? '0' : 'auto',
         }}>
           <div dangerouslySetInnerHTML={{ __html: content }} />
           {message.role === 'assistant' && index === messages.length - 1 && responseTime && (
