@@ -808,7 +808,7 @@ Available functions:
   - telegram(token) - returns Telegram group link
   - discord(token) - returns Discord server link
   - description(token) - returns project description
-  - getNews(token) - returns latest news articles
+  - usePerplexity(query) - returns latest news and analysis using Perplexity AI
 
 - Historical Data:
   - priceHistoryData(token, period) - returns array of {date, price} objects
@@ -844,7 +844,7 @@ Instructions:
 6. For questions about token performance, price movement, or trading decisions, always include:
    - Technical analysis (1d, 7d, and 30d periods)
    - Recent price changes
-   - Latest news
+   - Latest news from Perplexity
    - Market data (volume, liquidity, market cap)
 
 Example format:
@@ -853,7 +853,7 @@ const data = {
   currentPrice: await price("bitcoin"),
   priceHistory: await priceHistoryData("bitcoin", "30d"),
   walletData: await getWalletPortfolio("0x123..."),
-  news: await getNews("bitcoin")
+  news: await usePerplexity("latest bitcoin news and analysis")
 };
 return data;
 \`\`\`
@@ -976,6 +976,10 @@ return data;
         getWalletPortfolio: async (address) => {
           const data = await getWalletPortfolio(address);
           return data;
+        },
+        usePerplexity: async (query) => {
+          const response = await usePerplexity(query);
+          return response;
         }
       };
 
@@ -990,6 +994,10 @@ return data;
         };
         const getWalletPortfolio = async (address) => {
           const data = await wrappedFunctions.getWalletPortfolio(address);
+          return data;
+        };
+        const usePerplexity = async (query) => {
+          const data = await wrappedFunctions.usePerplexity(query);
           return data;
         };
         ${code}
@@ -1701,6 +1709,39 @@ return data;
     if (change < -5) return 'Downward';
     return 'Sideways';
   };
+
+  async function usePerplexity(content) {
+    const options = {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer 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',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-sonar-small-128k-online",
+        messages: [
+          {
+            role: "user",
+            content: content
+          }
+        ]
+      })
+    };
+
+    try {
+      const response = await fetch('https://api.perplexity.ai/chat/completions', options);
+      const data = await response.json();
+      return data.choices[0].message.content;
+    } catch (error) {
+      console.error('Error calling Perplexity API:', error);
+      throw error;
+    }
+  }
+
+  // Example usage:
+  // usePerplexity("solana news")
+  //   .then(content => console.log(content))
+  //   .catch(error => console.error(error));
 
   return (
     <ChatInterfaceUI
