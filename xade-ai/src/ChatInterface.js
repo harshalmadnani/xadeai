@@ -905,7 +905,7 @@ return data;
           // Make call to Groq API instead of OpenAI
           const finalResponse = await groq.chat.completions.create({
             messages: [
-              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions about token performance, price movement, or trading decisions provide a buy/sell or perfomance rating out of 10.0` }
+              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions about token performance, price movement, or trading decisions provide a buy/sell (only if user asks whether they should buy or sell) or perfomance rating out of 10.0` }
             ],
             model: "llama3-8b-8192",
             temperature: 0.7,
@@ -1714,7 +1714,7 @@ return data;
     const options = {
       method: 'POST',
       headers: {
-        Authorization: 'Bearer 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',
+        Authorization: `Bearer ${process.env.REACT_APP_PERPLEXITY_API_KEY}`,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
