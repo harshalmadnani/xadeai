@@ -1026,20 +1026,47 @@ return data;
 
   // Modify the renderMessage function to include response time
   const renderMessage = (message, index) => {
-    let content = message.content;
-    
-    content = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-    content = content.replace(/###\s*(.*?)\s*(\n|$)/g, '<h3>$1</h3>');
-    
-    const executionResultMatch = content.match(/\*\*Execution Result:\*\*\n```\n([\s\S]*?)\n```/);
-    const executionResult = executionResultMatch ? executionResultMatch[1] : null;
-    
-    if (executionResult === 'please resend the prompt') {
-      content = 'Please resend the prompt.';
-    } else if (executionResult && executionResult.startsWith('"') && executionResult.endsWith('"')) {
-      content = content.replace(executionResult, executionResult.slice(1, -1));
-    }
-    
+    // Format the content with proper styling
+    const formatContent = (content) => {
+      // Replace URLs with clickable links
+      content = content.replace(
+        /(https?:\/\/[^\s]+)/g,
+        '<a href="$1" target="_blank" rel="noopener noreferrer" style="color: #00a0ff; text-decoration: none;">$1</a>'
+      );
+      
+      // Replace bold text (**text**) with styled spans
+      content = content.replace(
+        /\*\*(.*?)\*\*/g,
+        '<span style="font-weight: 600;">$1</span>'
+      );
+      
+      // Replace headers (###) with styled divs
+      content = content.replace(
+        /###\s*(.*?)(\n|$)/g,
+        '<div style="font-size: 1.17em; font-weight: 600; margin: 1em 0;">$1</div>'
+      );
+      
+      // Replace code blocks with styled pre elements
+      content = content.replace(
+        /```(.*?)\n([\s\S]*?)```/g,
+        '<pre style="background-color: rgba(0, 0, 0, 0.1); padding: 1em; border-radius: 4px; overflow-x: auto;"><code>$2</code></pre>'
+      );
+      
+      // Replace single line code with styled inline code
+      content = content.replace(
+        /`([^`]+)`/g,
+        '<code style="background-color: rgba(0, 0, 0, 0.1); padding: 0.2em 0.4em; border-radius: 3px;">$1</code>'
+      );
+      
+      // Replace bullet points with styled lists
+      content = content.replace(
+        /^\s*[-*]\s(.+)$/gm,
+        '<li style="margin-left: 20px;">$1</li>'
+      );
+
+      return content;
+    };
+
     return (
       <div key={index} style={styles.message}>
         {message.role === 'assistant' && (
@@ -1060,7 +1087,19 @@ return data;
           marginLeft: message.role === 'user' ? 'auto' : '0',
           marginRight: message.role === 'user' ? '0' : 'auto',
         }}>
-          <div dangerouslySetInnerHTML={{ __html: content }} />
+          <div 
+            dangerouslySetInnerHTML={{ __html: formatContent(message.content) }}
+            style={{
+              lineHeight: '1.5',
+              '& a': {
+                color: '#00a0ff',
+                textDecoration: 'none',
+                '&:hover': {
+                  textDecoration: 'underline'
+                }
+              }
+            }}
+          />
           {message.role === 'assistant' && index === messages.length - 1 && responseTime && (
             <Typography variant="caption" style={{ marginTop: '5px', color: '#888' }}>
               Response time: {responseTime}ms
