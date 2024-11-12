@@ -113,10 +113,10 @@ const ChatInterfaceUI = ({
       <div style={styles.messageList} ref={messageListRef}>
         {messages.length === 0 ? (
           <div style={styles.welcomeMessage}>
-            <Typography variant="h5" style={{ color: 'white', marginBottom: '20px' }}>
+            <Typography variant="h5" style={{ color: 'white', marginBottom: '20px', fontSize: '18px' }}>
               Welcome to Xade AI! 👋
             </Typography>
-            <Typography style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '30px' }}>
+            <Typography style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '30px', fontSize: '14px' }}>
               I can help you with:
             </Typography>
             <div style={{
@@ -177,7 +177,7 @@ const ChatInterfaceUI = ({
                     <span style={{ fontSize: '20px' }}>{suggestion.icon}</span>
                     <span style={{ 
                       textAlign: 'left',
-                      fontSize: '14px',
+                      fontSize: '13px',
                       fontWeight: '500',
                       lineHeight: '1.4'
                     }}>
@@ -256,9 +256,9 @@ const ChatInterfaceUI = ({
         }
       }}
     >
-      <DialogTitle style={{ color: 'white' }}>Manage Wallet Addresses</DialogTitle>
+      <DialogTitle style={{ color: 'white', fontSize: '16px' }}>Manage Wallet Addresses</DialogTitle>
       <DialogContent>
-        <DialogContentText style={{ color: '#999' }}>
+        <DialogContentText style={{ color: '#999', fontSize: '14px' }}>
           Add or remove wallet addresses to analyze your portfolio.
         </DialogContentText>
         <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
@@ -773,7 +773,12 @@ function ChatInterface() {
             content: `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
 
 The user's wallet addresses are: ${portfolioAddresses.join(', ')}
-
+If the user asks about:
+1. Whether someone would buy a token
+2. Top tokens or token lists
+3. Which tokens to buy
+4. Social sentiment or trending tokens
+Respond with: "Social data analysis and token recommendations are coming soon! Stay tuned for updates."
 Available functions:
 - Market Data:
   - price(token) - returns current price in USD
@@ -836,6 +841,11 @@ Instructions:
 3. Format your response as JavaScript code that calls the necessary functions
 4. For historical data, always specify the period needed
 5. Always return the fetched data as a structured object
+6. For questions about token performance, price movement, or trading decisions, always include:
+   - Technical analysis (1d, 7d, and 30d periods)
+   - Recent price changes
+   - Latest news
+   - Market data (volume, liquidity, market cap)
 
 Example format:
 \`\`\`javascript
@@ -895,7 +905,7 @@ return data;
           // Make call to Groq API instead of OpenAI
           const finalResponse = await groq.chat.completions.create({
             messages: [
-              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result}` }
+              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions about token performance, price movement, or trading decisions provide a buy/sell or perfomance rating out of 10.0` }
             ],
             model: "llama3-8b-8192",
             temperature: 0.7,
@@ -1026,7 +1036,6 @@ return data;
 
   // Modify the renderMessage function to include response time
   const renderMessage = (message, index) => {
-    // Format the content with proper styling
     const formatContent = (content) => {
       // Replace URLs with clickable links
       content = content.replace(
@@ -1043,32 +1052,37 @@ return data;
       // Replace headers (###) with styled divs
       content = content.replace(
         /###\s*(.*?)(\n|$)/g,
-        '<div style="font-size: 1.17em; font-weight: 600; margin: 1em 0;">$1</div>'
+        '<div style="font-size: 19px; font-weight: 600; margin: 1em 0;">$1</div>'
       );
       
       // Replace code blocks with styled pre elements
       content = content.replace(
         /```(.*?)\n([\s\S]*?)```/g,
-        '<pre style="background-color: rgba(0, 0, 0, 0.1); padding: 1em; border-radius: 4px; overflow-x: auto;"><code>$2</code></pre>'
+        '<pre style="background-color: rgba(0, 0, 0, 0.1); padding: 1em; border-radius: 4px; overflow-x: auto; font-size: 18px;"><code>$2</code></pre>'
       );
       
       // Replace single line code with styled inline code
       content = content.replace(
         /`([^`]+)`/g,
-        '<code style="background-color: rgba(0, 0, 0, 0.1); padding: 0.2em 0.4em; border-radius: 3px;">$1</code>'
+        '<code style="background-color: rgba(0, 0, 0, 0.1); padding: 0.2em 0.4em; border-radius: 3px; font-size: 18px;">$1</code>'
       );
       
       // Replace bullet points with styled lists
       content = content.replace(
         /^\s*[-*]\s(.+)$/gm,
-        '<li style="margin-left: 20px;">$1</li>'
+        '<li style="margin-left: 20px; font-size: 18px;">$1</li>'
       );
 
       return content;
     };
 
     return (
-      <div key={index} style={styles.message}>
+      <div key={index} style={{
+        ...styles.message,
+        maxWidth: '95%',
+        marginLeft: message.role === 'user' ? 'auto' : '0',
+        marginRight: '0'
+      }}>
         {message.role === 'assistant' && (
           <img 
             src='/1.png'
@@ -1084,13 +1098,18 @@ return data;
         <div style={{
           ...styles.bubble,
           ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble),
-          marginLeft: message.role === 'user' ? 'auto' : '0',
-          marginRight: message.role === 'user' ? '0' : 'auto',
+          fontSize: '18px',
+          textAlign: 'left',
+          maxWidth: '100%',
+          padding: '14px 18px',
+          lineHeight: '1.6',
         }}>
           <div 
             dangerouslySetInnerHTML={{ __html: formatContent(message.content) }}
             style={{
-              lineHeight: '1.5',
+              lineHeight: '1.6',
+              fontSize: '18px',
+              textAlign: 'left',
               '& a': {
                 color: '#00a0ff',
                 textDecoration: 'none',
@@ -1101,7 +1120,13 @@ return data;
             }}
           />
           {message.role === 'assistant' && index === messages.length - 1 && responseTime && (
-            <Typography variant="caption" style={{ marginTop: '5px', color: '#888' }}>
+            <Typography variant="caption" style={{ 
+              marginTop: '8px', 
+              color: '#888', 
+              fontSize: '13px',
+              display: 'block',
+              textAlign: 'left' 
+            }}>
               Response time: {responseTime}ms
             </Typography>
           )}
