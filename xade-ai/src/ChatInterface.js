@@ -773,12 +773,7 @@ function ChatInterface() {
             content: `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
 
 The user's wallet addresses are: ${portfolioAddresses.join(', ')}
-If the user asks about:
-1. Whether someone would buy a token
-2. Top tokens or token lists
-3. Which tokens to buy
-4. Social sentiment or trending tokens
-Respond with: "Social data analysis and token recommendations are coming soon! Stay tuned for updates."
+
 Available functions:
 - Market Data:
   - price(token) - returns current price in USD
@@ -905,7 +900,12 @@ return data;
           // Make call to Groq API instead of OpenAI
           const finalResponse = await groq.chat.completions.create({
             messages: [
-              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions about token performance, price movement, or trading decisions provide a buy/sell (only if user asks whether they should buy or sell) or perfomance rating out of 10.0` }
+              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions about token performance provide a performance rating out of 10.0. For questions about trading decisions provide a buy/sell rating out of 10.0.If the user asks about:
+1. Whether someone would buy a token
+2. Top tokens or token lists
+3. Which tokens to buy
+4. Social sentiment or trending tokens
+Respond with: "Social data analysis and token recommendations are coming soon! Stay tuned for updates."` }
             ],
             model: "llama3-8b-8192",
             temperature: 0.7,
