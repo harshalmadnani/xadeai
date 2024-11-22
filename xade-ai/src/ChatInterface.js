@@ -59,6 +59,11 @@ const ChatInterfaceUI = ({
   handleAddWalletAddress,
   handleRemoveWalletAddress,
   setNewWalletAddress,
+  isThesisDialogOpen,
+  customThesis,
+  handleOpenThesisDialog,
+  handleCloseThesisDialog,
+  handleSaveThesis,
 }) => (
   <div style={styles.chatInterface}>
     {renderDisclaimerDialog()}
@@ -101,6 +106,20 @@ const ChatInterfaceUI = ({
           }}
         >
           Portfolio ({portfolioAddresses.length})
+        </Button>
+        <Button
+          onClick={handleOpenThesisDialog}
+          variant="outlined"
+          style={{
+            color: 'white',
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            borderRadius: '12px',
+            textTransform: 'none',
+            padding: '8px 20px',
+            fontSize: '14px',
+          }}
+        >
+          Investment Strategy
         </Button>
       </div>
     </div>
@@ -156,7 +175,7 @@ const ChatInterfaceUI = ({
                 <Button
                   key={index}
                   variant="outlined"
-                  onClick={() => setInput(`Tell me about ${suggestion.question.toLowerCase()}`)}
+                  onClick={() => setInput(`${suggestion.question.toLowerCase()}`)}
                   style={{
                     color: 'white',
                     borderColor: 'rgba(255, 255, 255, 0.2)',
@@ -341,8 +360,342 @@ const ChatInterfaceUI = ({
         </Button>
       </DialogActions>
     </Dialog>
+
+    <InvestmentThesisDialog
+      open={isThesisDialogOpen}
+      onClose={handleCloseThesisDialog}
+      onSave={handleSaveThesis}
+      currentThesis={customThesis}
+    />
   </div>
 );
+
+// Add this component before the ChatInterface function
+const InvestmentThesisDialog = ({ open, onClose, onSave, currentThesis }) => {
+  const [thesis, setThesis] = useState(currentThesis);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onSave(thesis);
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        style: {
+          backgroundColor: '#000000',
+          color: 'white',
+          borderRadius: '24px',
+          padding: '32px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+        }
+      }}
+    >
+      <DialogTitle style={{ 
+        color: 'white',
+        fontSize: '32px',
+        fontWeight: '600',
+        padding: '0 0 24px 0',
+        letterSpacing: '-0.5px'
+      }}>
+        Investment Strategy
+      </DialogTitle>
+
+      <DialogContent style={{ padding: '0' }}>
+        <Typography style={{ 
+          color: '#666', 
+          marginBottom: '40px',
+          fontSize: '15px',
+          lineHeight: '1.6',
+          letterSpacing: '0.2px'
+        }}>
+          Define your investment parameters for personalized AI recommendations
+        </Typography>
+        
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '48px' }}>
+            <Typography variant="h6" style={{ 
+              color: '#fff',
+              fontSize: '18px',
+              marginBottom: '24px',
+              fontWeight: '500',
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase'
+            }}>
+              Strategy Rules
+            </Typography>
+
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="Example: Buy when RSI &lt; 30 with increasing volume and MACD bullish crossover"
+              value={thesis.buyStrategy}
+              onChange={(e) => setThesis({...thesis, buyStrategy: e.target.value})}
+              margin="normal"
+              label="Entry Strategy"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  color: 'white',
+                  background: '#111111',
+                  borderRadius: '16px',
+                  transition: 'all 0.2s ease',
+                  '& fieldset': { 
+                    border: '1px solid #222',
+                  },
+                  '&:hover fieldset': { 
+                    borderColor: '#444'
+                  },
+                  '&.Mui-focused fieldset': { 
+                    borderColor: '#666'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#666'
+                },
+                marginBottom: '24px'
+              }}
+            />
+
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="Example: Exit when price drops below 20-day MA or RSI &gt; 70"
+              value={thesis.sellStrategy}
+              onChange={(e) => setThesis({...thesis, sellStrategy: e.target.value})}
+              margin="normal"
+              label="Exit Strategy"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  color: 'white',
+                  background: '#111111',
+                  borderRadius: '16px',
+                  transition: 'all 0.2s ease',
+                  '& fieldset': { 
+                    border: '1px solid #222',
+                  },
+                  '&:hover fieldset': { 
+                    borderColor: '#444'
+                  },
+                  '&.Mui-focused fieldset': { 
+                    borderColor: '#666'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#666'
+                }
+              }}
+            />
+          </div>
+
+          <div style={{ marginBottom: '48px' }}>
+            <Typography variant="h6" style={{ 
+              color: '#fff',
+              fontSize: '18px',
+              marginBottom: '24px',
+              fontWeight: '500',
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase'
+            }}>
+              Risk Parameters
+            </Typography>
+
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: '1fr 1fr', 
+              gap: '24px',
+              margin: '0 0' // Ensure no unexpected margins
+            }}>
+              <div style={{
+                background: '#111111',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid #222',
+                width: '100%', // Ensure full width within grid cell
+                boxSizing: 'border-box' // Include padding in width calculation
+              }}>
+                <Typography style={{ 
+                  color: '#666', 
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase'
+                }}>
+                  Risk Tolerance
+                </Typography>
+                <Select
+                  fullWidth
+                  value={thesis.preferences.riskTolerance}
+                  onChange={(e) => setThesis({
+                    ...thesis, 
+                    preferences: {...thesis.preferences, riskTolerance: e.target.value}
+                  })}
+                  sx={{ 
+                    color: 'white',
+                    backgroundColor: '#000',
+                    borderRadius: '12px',
+                    width: '100%', // Ensure full width
+                    '& .MuiOutlinedInput-notchedOutline': { 
+                      border: '1px solid #333'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { 
+                      borderColor: '#444'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { 
+                      borderColor: '#666'
+                    }
+                  }}
+                >
+                  <MenuItem value="low">Conservative</MenuItem>
+                  <MenuItem value="medium">Moderate</MenuItem>
+                  <MenuItem value="high">Aggressive</MenuItem>
+                </Select>
+              </div>
+
+              <div style={{
+                background: '#111111',
+                borderRadius: '16px',
+                padding: '24px',
+                border: '1px solid #222'
+              }}>
+                <Typography style={{ 
+                  color: '#666', 
+                  marginBottom: '16px',
+                  fontSize: '14px',
+                  letterSpacing: '0.5px',
+                  textTransform: 'uppercase'
+                }}>
+                  Time Horizon
+                </Typography>
+                <Select
+                  fullWidth
+                  value={thesis.preferences.timeHorizon}
+                  onChange={(e) => setThesis({
+                    ...thesis, 
+                    preferences: {...thesis.preferences, timeHorizon: e.target.value}
+                  })}
+                  sx={{ 
+                    color: 'white',
+                    backgroundColor: '#000',
+                    borderRadius: '12px',
+                    '& .MuiOutlinedInput-notchedOutline': { 
+                      border: '1px solid #333'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': { 
+                      borderColor: '#444'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { 
+                      borderColor: '#666'
+                    }
+                  }}
+                >
+                  <MenuItem value="short">Short Term (&lt; 1 month)</MenuItem>
+                  <MenuItem value="medium">Medium Term (1-6 months)</MenuItem>
+                  <MenuItem value="long">Long Term (&gt; 6 months)</MenuItem>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <Typography variant="h6" style={{ 
+              color: '#fff',
+              fontSize: '18px',
+              marginBottom: '24px',
+              fontWeight: '500',
+              letterSpacing: '0.5px',
+              textTransform: 'uppercase'
+            }}>
+              Performance Metrics
+            </Typography>
+
+            <TextField
+              fullWidth
+              multiline
+              rows={3}
+              placeholder="Example: Weight technical indicators 60%, fundamentals 40%"
+              value={thesis.ratingCalculation}
+              onChange={(e) => setThesis({...thesis, ratingCalculation: e.target.value})}
+              label="Custom Rating Formula"
+              sx={{ 
+                '& .MuiOutlinedInput-root': {
+                  color: 'white',
+                  background: '#111111',
+                  borderRadius: '16px',
+                  transition: 'all 0.2s ease',
+                  '& fieldset': { 
+                    border: '1px solid #222',
+                  },
+                  '&:hover fieldset': { 
+                    borderColor: '#444'
+                  },
+                  '&.Mui-focused fieldset': { 
+                    borderColor: '#666'
+                  }
+                },
+                '& .MuiInputLabel-root': {
+                  color: '#666'
+                }
+              }}
+            />
+          </div>
+        </form>
+      </DialogContent>
+
+      <DialogActions style={{ 
+        padding: '32px 0 0 0',
+        borderTop: '1px solid #222',
+        marginTop: '48px',
+        gap: '16px'
+      }}>
+        <Button 
+          onClick={onClose}
+          style={{
+            color: '#999',
+            backgroundColor: '#111',
+            borderRadius: '12px',
+            padding: '12px 24px',
+            textTransform: 'none',
+            fontSize: '15px',
+            fontWeight: '500',
+            border: '1px solid #222',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: '#222'
+            }
+          }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleSubmit}
+          variant="contained"
+          style={{ 
+            backgroundColor: '#fff',
+            color: '#000',
+            borderRadius: '12px',
+            padding: '12px 32px',
+            textTransform: 'none',
+            fontSize: '15px',
+            fontWeight: '500',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: '#e0e0e0'
+            }
+          }}
+        >
+          Save Strategy
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
 
 function ChatInterface() {
   const [input, setInput] = useState('');
@@ -771,8 +1124,7 @@ function ChatInterface() {
           { 
             role: "system",
             content: `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
-
-The user's wallet addresses are: ${portfolioAddresses.join(', ')}
+            The user's wallet addresses are: ${portfolioAddresses.join(', ')}
 
 Available functions:
 - Market Data:
@@ -829,8 +1181,7 @@ Available functions:
       }]
       pnlHistory: historical PNL data
     }
-
-Instructions:
+      Instructions:
 1. Return only the raw data needed to answer the user's question
 2. Do not perform any calculations or analysis
 3. Format your response as JavaScript code that calls the necessary functions
@@ -852,7 +1203,16 @@ const data = {
 };
 return data;
 \`\`\`
-`
+
+
+The user's custom investment thesis:
+Buy Strategy: ${customThesis.buyStrategy}
+Sell Strategy: ${customThesis.sellStrategy}
+Rating Calculation: ${customThesis.ratingCalculation}
+Risk Tolerance: ${customThesis.preferences.riskTolerance}
+
+When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences.
+...`
           },
           { role: "user", content: userInput }
         ],
@@ -900,7 +1260,7 @@ return data;
           // Make call to Groq API instead of OpenAI
           const finalResponse = await groq.chat.completions.create({
             messages: [
-              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions about token performance provide a performance rating out of 10.0. For questions about trading decisions provide a buy/sell rating out of 10.0.If the user asks about:
+              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions only and exclusively about token performance provide a performance rating out of 10.0. For questions about only specifically for trading decisions provide a buy/sell rating out of 10.0.If the user asks about:
 1. Whether someone would buy a token
 2. Top tokens or token lists
 3. Which tokens to buy
@@ -1743,6 +2103,34 @@ Respond with: "Social data analysis and token recommendations are coming soon! S
   //   .then(content => console.log(content))
   //   .catch(error => console.error(error));
 
+  const [customThesis, setCustomThesis] = useState({
+    buyStrategy: '',
+    sellStrategy: '',
+    ratingCalculation: '',
+    preferences: {
+      riskTolerance: 'medium',
+      timeHorizon: 'medium',
+      preferredMetrics: []
+    }
+  });
+
+  // Add new dialog state
+  const [isThesisDialogOpen, setIsThesisDialogOpen] = useState(false);
+
+  // Add thesis management handlers
+  const handleOpenThesisDialog = () => {
+    setIsThesisDialogOpen(true);
+  };
+
+  const handleCloseThesisDialog = () => {
+    setIsThesisDialogOpen(false);
+  };
+
+  const handleSaveThesis = (newThesis) => {
+    setCustomThesis(newThesis);
+    setIsThesisDialogOpen(false);
+  };
+
   return (
     <ChatInterfaceUI
       disclaimerAccepted={disclaimerAccepted}
@@ -1768,6 +2156,11 @@ Respond with: "Social data analysis and token recommendations are coming soon! S
       handleAddWalletAddress={handleAddWalletAddress}
       handleRemoveWalletAddress={handleRemoveWalletAddress}
       setNewWalletAddress={setNewWalletAddress}
+      isThesisDialogOpen={isThesisDialogOpen}
+      customThesis={customThesis}
+      handleOpenThesisDialog={handleOpenThesisDialog}
+      handleCloseThesisDialog={handleCloseThesisDialog}
+      handleSaveThesis={handleSaveThesis}
     />
   );
 }
