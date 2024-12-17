@@ -1260,12 +1260,8 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
           // Make call to Groq API instead of OpenAI
           const finalResponse = await groq.chat.completions.create({
             messages: [
-              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} For questions only and exclusively about token performance provide a performance rating out of 10.0. For questions about only specifically for trading decisions provide a buy/sell rating out of 10.0.If the user asks about:
-1. Whether someone would buy a token
-2. Top tokens or token lists
-3. Which tokens to buy
-4. Social sentiment or trending tokens
-Respond with: "Social data analysis and token recommendations are coming soon! Stay tuned for updates."` }
+              { role: "user", content: `As Xade AI, provide an answer for the following query: "${userInput}". The data from the execution is: ${result} 
+if a user has question for social analysis or asks for a list of tokens respond with: "Social data analysis and token recommendations are coming soon! Stay tuned for updates."` }
             ],
             model: "llama3-8b-8192",
             temperature: 0.7,
