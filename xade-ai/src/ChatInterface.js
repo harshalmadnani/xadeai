@@ -1116,15 +1116,110 @@ function ChatInterface() {
     return data[key];
   };
 
+  // Function to get CEX listings
+  const cexs = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    
+    if (!metadata?.cexs || !Array.isArray(metadata.cexs)) {
+      return 'No CEX listing information available';
+    }
+    
+    // Format CEX data
+    const formattedCexs = metadata.cexs
+      .filter(cex => cex.id) // Filter out null entries
+      .map(cex => ({
+        name: cex.name || cex.id,
+        logo: cex.logo || null
+      }));
+
+    return {
+      totalListings: formattedCexs.length,
+      exchanges: formattedCexs
+    };
+  };
+
+  // Function to get investor information
+  const investors = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    
+    if (!metadata?.investors || !Array.isArray(metadata.investors)) {
+      return 'No investor information available';
+    }
+    
+    // Format investors data
+    const formattedInvestors = metadata.investors.map(investor => ({
+      name: investor.name,
+      type: investor.type,
+      isLead: investor.lead,
+      country: investor.country_name || 'Unknown',
+      image: investor.image
+    }));
+
+    return {
+      totalInvestors: formattedInvestors.length,
+      leadInvestors: formattedInvestors.filter(inv => inv.isLead).map(inv => inv.name),
+      vcInvestors: formattedInvestors.filter(inv => inv.type === 'Ventures Capital').length,
+      angelInvestors: formattedInvestors.filter(inv => inv.type === 'Angel Investor').length,
+      allInvestors: formattedInvestors
+    };
+  };
+
+  // Function to get token distribution
+  const distribution = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    
+    if (!metadata?.distribution || !Array.isArray(metadata.distribution)) {
+      return 'No distribution information available';
+    }
+    
+    return metadata.distribution.map(item => ({
+      category: item.name,
+      percentage: item.percentage
+    }));
+  };
+
+  // Function to get release schedule
+  const releaseSchedule = async (token) => {
+    const normalizedToken = getTokenName(token);
+    const metadata = await getMetadata(normalizedToken);
+    
+    if (!metadata?.release_schedule || !Array.isArray(metadata.release_schedule)) {
+      return 'No release schedule information available';
+    }
+    
+    const schedule = metadata.release_schedule.map(item => ({
+      date: new Date(item.unlock_date).toISOString(),
+      tokensToUnlock: item.tokens_to_unlock,
+      allocation: item.allocation_details
+    }));
+
+    // Calculate some useful metrics
+    const totalTokens = schedule.reduce((sum, item) => sum + item.tokensToUnlock, 0);
+    const upcomingUnlocks = schedule
+      .filter(item => new Date(item.date) > new Date())
+      .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    return {
+      totalTokensInSchedule: totalTokens,
+      totalUnlockEvents: schedule.length,
+      upcomingUnlocks: upcomingUnlocks.slice(0, 5), // Next 5 unlocks
+      fullSchedule: schedule
+    };
+  };
+
+  // Update the system prompt to include new functions
   const callOpenAIAPI = async (userInput) => {
     try {
       const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         messages: [
           { 
             role: "system",
             content: `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
-            The user's wallet addresses are: ${portfolioAddresses.join(', ')}
+              The user's wallet addresses are: ${portfolioAddresses.join(', ')}
 
 Available functions:
 - Market Data:
@@ -1167,6 +1262,7 @@ Available functions:
 - getPortfolioAtDateTime(addresses, timestamp) - returns portfolio value at specific date/time
 - getPortfolioTrends(addresses, period) - returns portfolio trend analysis
 - getPortfolioGrowth(addresses, fromTimestamp, toTimestamp) - returns portfolio growth between dates
+
 - Wallet Analysis:
   - getWalletPortfolio(address) - returns detailed wallet information:
     {
@@ -1181,18 +1277,46 @@ Available functions:
       }]
       pnlHistory: historical PNL data
     }
-      Instructions:
-1. Return only the raw data needed to answer the user's question
-2. Do not perform any calculations or analysis
-3. Format your response as JavaScript code that calls the necessary functions
-4. For historical data, always specify the period needed
-5. Always return the fetched data as a structured object
-6. For questions about token performance, price movement, or trading decisions, always include:
-   - Technical analysis (1d, 7d, and 30d periods)
-   - Recent price changes
-   - Latest news from Perplexity
-   - Market data (volume, liquidity, market cap)
 
+- Token Information:
+  - cexs(token) - returns exchange listing information:
+    {
+      totalListings: number,
+      exchanges: [{
+        name: string,
+        logo: string | null
+      }]
+    }
+  - investors(token) - returns detailed investor information:
+    {
+      totalInvestors: number,
+      leadInvestors: string[],
+      vcInvestors: number,
+      angelInvestors: number,
+      allInvestors: [{
+        name: string,
+        type: string,
+        isLead: boolean,
+        country: string,
+        image: string
+      }]
+    }
+  - distribution(token) - returns token distribution:
+    [{
+      category: string,
+      percentage: number
+    }]
+  - releaseSchedule(token) - returns token release schedule:
+    {
+      totalTokensInSchedule: number,
+      totalUnlockEvents: number,
+      upcomingUnlocks: array,
+      fullSchedule: [{
+        date: string,
+        tokensToUnlock: number,
+        allocation: object
+      }]
+    }
 Example format:
 \`\`\`javascript
 const data = {
@@ -1204,6 +1328,17 @@ const data = {
 return data;
 \`\`\`
 
+Instructions:
+1. Return only the raw data needed to answer the user's question
+2. Do not perform any calculations or analysis
+3. Format your response as JavaScript code that calls the necessary functions
+4. For historical data, always specify the period needed
+5. Always return the fetched data as a structured object
+6. For questions about token performance, price movement, or trading decisions, always include:
+   - Technical analysis (1d, 7d, and 30d periods)
+   - Recent price changes
+   - Latest news from Perplexity
+   - Market data (volume, liquidity, market cap)
 
 The user's custom investment thesis:
 Buy Strategy: ${customThesis.buyStrategy}
@@ -1211,8 +1346,7 @@ Sell Strategy: ${customThesis.sellStrategy}
 Rating Calculation: ${customThesis.ratingCalculation}
 Risk Tolerance: ${customThesis.preferences.riskTolerance}
 
-When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences.
-...`
+When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences.`
           },
           { role: "user", content: userInput }
         ],
@@ -1336,6 +1470,18 @@ if a user has question for social analysis or asks for a list of tokens respond 
         usePerplexity: async (query) => {
           const response = await usePerplexity(query);
           return response;
+        },
+        cexs: async (token) => {
+          return await cexs(token);
+        },
+        investors: async (token) => {
+          return await investors(token);
+        },
+        distribution: async (token) => {
+          return await distribution(token);
+        },
+        releaseSchedule: async (token) => {
+          return await releaseSchedule(token);
         }
       };
 
@@ -1355,6 +1501,18 @@ if a user has question for social analysis or asks for a list of tokens respond 
         const usePerplexity = async (query) => {
           const data = await wrappedFunctions.usePerplexity(query);
           return data;
+        };
+        const cexs = async (token) => {
+          return await wrappedFunctions.cexs(token);
+        };
+        const investors = async (token) => {
+          return await wrappedFunctions.investors(token);
+        };
+        const distribution = async (token) => {
+          return await wrappedFunctions.distribution(token);
+        };
+        const releaseSchedule = async (token) => {
+          return await wrappedFunctions.releaseSchedule(token);
         };
         ${code}
       }
