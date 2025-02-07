@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import OpenAI from "openai";
 import { coins } from './coins';
-import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider, Alert, Snackbar, Typography, Paper, Link } from '@mui/material';
+import { Select, MenuItem, InputAdornment, createTheme, ThemeProvider, Alert, Snackbar, Typography, Paper, Link, Tabs, Tab } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';     
 import { createContext, useContext } from 'react';
 import { Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from '@mui/material';
@@ -16,6 +16,10 @@ import CircularProgress from '@mui/material/CircularProgress';
 import SendIcon from '@mui/icons-material/Send';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import WalletIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
+import ChatIcon from '@mui/icons-material/Chat';
+import CodeIcon from '@mui/icons-material/Code';
+import Terminal from './terminal';
+import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 // Create a context for storing fetched data
 const DataContext = createContext(null);
 
@@ -691,6 +695,88 @@ const InvestmentThesisDialog = ({ open, onClose, onSave, currentThesis }) => {
           }}
         >
           Save Strategy
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// Add AgentLauncher component before ChatInterfaceUI
+const AgentLauncher = ({ open, onClose }) => {
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="md"
+      fullWidth
+      PaperProps={{
+        style: {
+          backgroundColor: '#000000',
+          color: 'white',
+          borderRadius: '24px',
+          padding: '32px',
+          border: '1px solid rgba(255,255,255,0.08)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+        }
+      }}
+    >
+      <DialogTitle style={{ 
+        color: 'white',
+        fontSize: '32px',
+        fontWeight: '600',
+        padding: '0 0 24px 0',
+        letterSpacing: '-0.5px'
+      }}>
+        No-Code AI Agent Builder
+      </DialogTitle>
+
+      <DialogContent style={{ padding: '0' }}>
+        <Typography style={{ 
+          color: '#666', 
+          marginBottom: '40px',
+          fontSize: '15px',
+          lineHeight: '1.6',
+          letterSpacing: '0.2px'
+        }}>
+          Create your own AI agent without writing any code. Coming soon!
+        </Typography>
+
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: '40px'
+        }}>
+          <RocketLaunchIcon style={{ 
+            fontSize: '64px',
+            color: '#666'
+          }} />
+        </div>
+      </DialogContent>
+
+      <DialogActions style={{ 
+        padding: '32px 0 0 0',
+        borderTop: '1px solid #222',
+        marginTop: '48px'
+      }}>
+        <Button 
+          onClick={onClose}
+          style={{
+            color: '#999',
+            backgroundColor: '#111',
+            borderRadius: '12px',
+            padding: '12px 24px',
+            textTransform: 'none',
+            fontSize: '15px',
+            fontWeight: '500',
+            border: '1px solid #222',
+            transition: 'all 0.2s ease',
+            '&:hover': {
+              backgroundColor: '#222'
+            }
+          }}
+        >
+          Close
         </Button>
       </DialogActions>
     </Dialog>
