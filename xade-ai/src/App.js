@@ -9,13 +9,12 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import AgentLauncher from './AgentLauncher'; 
 import MenuIcon from '@mui/icons-material/Menu';
 import IconButton from '@mui/material/IconButton';
-import Drawer from '@mui/material/Drawer';
 import CloseIcon from '@mui/icons-material/Close';
 
 function App() {
   const [selectedTab, setSelectedTab] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -28,14 +27,14 @@ function App() {
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
-    if (isMobile) setDrawerOpen(false);
+    setSidebarVisible(false);
   };
 
   const NavigationTabs = () => (
     <Tabs
       value={selectedTab}
       onChange={handleTabChange}
-      orientation={isMobile ? "horizontal" : "vertical"}
+      orientation="vertical"
       sx={{
         '& .MuiTabs-indicator': {
           display: 'none',
@@ -45,8 +44,7 @@ function App() {
           width: '50px',
           minHeight: '50px',
           padding: '12px',
-          marginBottom: isMobile ? '0' : '12px',
-          marginRight: isMobile ? '12px' : '0',
+          marginBottom: '12px',
           color: 'rgba(255, 255, 255, 0.5)',
           transition: 'all 0.2s ease',
           '&.Mui-selected': {
@@ -97,116 +95,115 @@ function App() {
     <div className="App">
       <div style={{
         display: 'flex',
-        flexDirection: isMobile ? 'column' : 'row',
+        flexDirection: 'column',
         height: '100%',
         background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
-      
         width: '100%',
       }}>
-        {isMobile ? (
-          // Mobile Topbar
-          <div style={{
-            height: '60px',
-            minHeight: '60px',
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            padding: '0 16px',
-          }}>
-            <IconButton
-              onClick={() => setDrawerOpen(true)}
-              sx={{ color: 'white' }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <img 
-              src="/1.png" 
-              alt="Logo" 
-              style={{
-                width: '30px',
-                height: '30px',
-                marginLeft: '16px',
-                borderRadius: '50%',
-              }}
-            />
-            <Drawer
-              anchor="left"
-              open={drawerOpen}
-              onClose={() => setDrawerOpen(false)}
-              PaperProps={{
-                sx: {
-                  backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                  padding: '20px',
-                }
-              }}
-            >
-              <NavigationTabs />
-            </Drawer>
-          </div>
-        ) : (
-          // Desktop Sidebar
-          <div style={{
-            width: '80px',
-            minWidth: '80px',
-            backgroundColor: 'rgba(0, 0, 0, 0.4)',
-            borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            padding: '20px 0',
-          }}>
-            <div style={{
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              width: '100%',
-            }}>
-              <img 
-                src="/1.png" 
-                alt="Logo" 
+        <div style={{
+          height: '60px',
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          padding: '0 16px',
+          zIndex: 1000,
+        }}>
+          <IconButton
+            onClick={() => setSidebarVisible(!sidebarVisible)}
+            sx={{ color: 'white' }}
+          >
+            <MenuIcon />
+          </IconButton>
+        </div>
+
+        <div style={{
+          display: 'flex',
+          flex: 1,
+          height: 'calc(100vh - 60px)',
+          position: 'relative',
+        }}>
+          {sidebarVisible && (
+            <>
+              <div
+                onClick={() => setSidebarVisible(false)}
                 style={{
-                  width: '40px',
-                  height: '40px',
-                  marginBottom: '40px',
-                  borderRadius: '50%',
+                  position: 'fixed',
+                  top: '60px',
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  zIndex: 100,
                 }}
               />
-              <NavigationTabs />
-              <IconButton
-                onClick={() => window.close()}
-                sx={{ 
-                  color: 'rgba(255, 255, 255, 0.5)',
-                  marginTop: 'auto',
-                  '&:hover': {
-                    color: 'white',
-                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                  }
-                }}
-              >
-                <CloseIcon />
-              </IconButton>
-            </div>
-          </div>
-        )}
-
-        {/* Main Content */}
-        <div style={{ 
-          flex: 1, 
-          display: 'flex', 
-          flexDirection: 'column',
-          height: isMobile ? 'calc(100vh - 60px)' : '100vh',
-          position: 'relative',
-          minWidth: 0,
-          width: '100%'
-        }}>
-          {selectedTab === 0 ? (
-            <ChatInterface />
-          ) : selectedTab === 1 ? (
-            <Terminal />
-          ) : (
-            <AgentLauncher />
+              <div style={{
+                position: 'fixed',
+                top: '60px',
+                left: 0,
+                bottom: 0,
+                width: isMobile ? '100%' : '80px',
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                borderRight: '1px solid rgba(255, 255, 255, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                padding: '20px 0',
+                zIndex: 1000,
+                boxShadow: '4px 0 15px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.3s ease',
+              }}>
+                <div style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  width: '100%',
+                }}>
+                  <img 
+                    src="/1.png" 
+                    alt="Logo" 
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      marginBottom: '40px',
+                      borderRadius: '50%',
+                    }}
+                  />
+                  <NavigationTabs />
+                  <IconButton
+                    onClick={() => setSidebarVisible(false)}
+                    sx={{ 
+                      color: 'rgba(255, 255, 255, 0.5)',
+                      marginTop: 'auto',
+                      '&:hover': {
+                        color: 'white',
+                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      }
+                    }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </div>
+              </div>
+            </>
           )}
+
+          <div style={{ 
+            flex: 1, 
+            display: 'flex', 
+            flexDirection: 'column',
+            position: 'relative',
+            minWidth: 0,
+            width: '100%'
+          }}>
+            {selectedTab === 0 ? (
+              <ChatInterface />
+            ) : selectedTab === 1 ? (
+              <Terminal />
+            ) : (
+              <AgentLauncher />
+            )}
+          </div>
         </div>
       </div>
     </div>

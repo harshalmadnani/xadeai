@@ -21,6 +21,15 @@
   margin-bottom: 30px;
 }
 
+.info-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  margin-bottom: 30px;
+  width: 100%;
+}
+
 .profile-input {
   max-width: 150px;
 }
@@ -34,13 +43,39 @@
   border-radius: 4px;
 }
 
+.name-input-plain {
+  border: none;
+  font-size: 24px;
+  font-weight: 500;
+  padding: 8px 0;
+  width: 100%;
+  background: transparent;
+  color: #fff;
+  text-align: center;
+}
+
+.description-input {
+  width: 100%;
+  min-height: 80px;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+  resize: vertical;
+  font-size: 14px;
+  margin: 10px 0;
+  text-align: center;
+}
+
 .configure-x {
   background: #111;
   border: 1px solid #333;
   color: white;
-  padding: 8px 16px;
+  padding: 10px 20px;
   border-radius: 4px;
   cursor: pointer;
+  width: fit-content;
 }
 
 .section-label {
@@ -182,53 +217,54 @@
   background: #222;
   color: #fff;
   border-color: #fff;
-} 
+}
 
 .profile-upload-container {
-    position: relative;
-    width: 80px;
-    height: 80px;
-  }
-  
-  .profile-upload-label {
-    display: block;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-  }
-  
-  .profile-icon {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    background: #111;
-    border: 2px dashed #333;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: border-color 0.2s ease;
-  }
-  
-  .profile-icon:hover {
-    border-color: #fff;
-  }
-  
-  .profile-icon svg {
-    width: 60%;
-    height: 60%;
-    color: #666;
-  }
-  
-  .profile-preview {
-    width: 100%;
-    height: 100%;
-    border-radius: 50%;
-    object-fit: cover;
-  }
-  
-  .profile-input {
-    display: none;
-  }
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 10px;
+}
+
+.profile-upload-label {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.profile-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #111;
+  border: 2px dashed #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease;
+}
+
+.profile-icon:hover {
+  border-color: #fff;
+}
+
+.profile-icon svg {
+  width: 60%;
+  height: 60%;
+  color: #666;
+}
+
+.profile-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.profile-input {
+  display: none;
+}
 
 .agent-name-input {
   font-size: 1.2rem;
@@ -270,3 +306,22 @@
   color: #666;
   text-align: center;
 } 
+select.name-input {
+  appearance: none;
+  background: #111 url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23ffffff%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E") no-repeat right 12px top 50%;
+  background-size: 12px auto;
+  padding-right: 30px;
+  cursor: pointer;
+  min-width: 14px;
+}
+
+select.name-input:focus {
+  border-color: #444;
+  outline: none;
+}
+
+select.name-input option {
+  background: #111;
+  color: white;
+  padding: 8px;
+}
