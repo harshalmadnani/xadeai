@@ -73,54 +73,19 @@ const ChatInterfaceUI = ({
   handleOpenSettings,
   handleCloseSettings,
 }) => (
-  <div style={styles.chatInterface}>
+  <div style={{
+    ...styles.chatInterface,
+    height: '100vh',
+    display: 'flex',
+    flexDirection: 'column',
+  }}>
     {renderDisclaimerDialog()}
-    <div style={{
-      ...styles.header,
-      justifyContent: 'space-between',
-      padding: '15px 25px',
-      borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-      backdropFilter: 'blur(10px)',
-      backgroundColor: 'rgba(0, 0, 0, 0.3)',
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center' }}>
-        <img 
-          src='./XADE.png' 
-          alt="Xade AI Logo" 
-          style={{ 
-            ...styles.logo, 
-            height: '20px',
-            width: 'auto',
-            objectFit: 'contain'
-          }} 
-        />
-      </div>
-      <div style={{ display: 'flex', gap: '15px' }}>
-        <IconButton
-          onClick={() => {}}  // Add history view handler if needed
-          style={{
-            color: 'white',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          }}
-        >
-          <HistoryIcon />
-        </IconButton>
-        <IconButton
-          onClick={handleOpenSettings}
-          style={{
-            color: 'white',
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-          }}
-        >
-          <SettingsIcon />
-        </IconButton>
-      </div>
-    </div>
-
     <div style={{
       ...styles.messageListContainer,
       padding: '20px',
-      background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)'
+      background: 'linear-gradient(180deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)',
+      flex: 1,
+      overflowY: 'auto',
     }}>
       <div style={styles.messageList} ref={messageListRef}>
         {messages.length === 0 ? (
@@ -209,7 +174,11 @@ const ChatInterfaceUI = ({
     <form onSubmit={handleSubmit} style={{
       ...styles.inputForm,
       padding: '20px',
-      borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+      borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+      position: 'sticky',
+      bottom: 0,
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      backdropFilter: 'blur(10px)',
     }}>
       <TextField
         fullWidth

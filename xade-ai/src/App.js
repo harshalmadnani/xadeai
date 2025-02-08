@@ -101,8 +101,13 @@ function App() {
         width: '100%',
       }}>
         <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
           height: '60px',
-          backgroundColor: 'rgba(0, 0, 0, 0.4)',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          backdropFilter: 'blur(10px)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
@@ -120,7 +125,8 @@ function App() {
         <div style={{
           display: 'flex',
           flex: 1,
-          height: 'calc(100vh - 60px)',
+          height: '100vh',
+          paddingTop: '60px',
           position: 'relative',
         }}>
           {sidebarVisible && (
@@ -129,7 +135,7 @@ function App() {
                 onClick={() => setSidebarVisible(false)}
                 style={{
                   position: 'fixed',
-                  top: '60px',
+                  top: 0,
                   left: 0,
                   right: 0,
                   bottom: 0,
@@ -139,16 +145,17 @@ function App() {
               />
               <div style={{
                 position: 'fixed',
-                top: '60px',
+                top: 0,
                 left: 0,
                 bottom: 0,
                 width: isMobile ? '100%' : '80px',
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                backgroundColor: 'rgba(0, 0, 0, 0.85)',
+                backdropFilter: 'blur(10px)',
                 borderRight: '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '20px 0',
+                padding: '80px 0 20px',
                 zIndex: 1000,
                 boxShadow: '4px 0 15px rgba(0, 0, 0, 0.3)',
                 transition: 'all 0.3s ease',
