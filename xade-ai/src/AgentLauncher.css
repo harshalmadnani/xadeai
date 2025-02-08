@@ -1,0 +1,272 @@
+.agent-launcher {
+  background-color: #000;
+  color: #ffffff;
+  padding: 20px;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.main-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding-bottom: 20px;
+  width: 100%;
+}
+
+.info-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.profile-input {
+  max-width: 150px;
+}
+
+.name-input {
+  flex: 1;
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+}
+
+.configure-x {
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.section-label {
+  font-size: 14px;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.data-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: #111;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.source-item.selected {
+  border-color: #fff; /* Or any color that matches your theme */
+}
+
+.actions-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+  margin-bottom: 30px;
+}
+
+.action-item {
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 4px;
+  padding: 12px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.action-item.selected {
+  border-color: #fff; /* Or any color that matches your theme */
+}
+
+.action-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.action-toggle {
+  background: none;
+  border: 1px solid #444;
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.action-tags {
+  display: flex;
+  gap: 8px;
+}
+
+.tag {
+  background: #333;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  color: #888;
+}
+
+.launch-button {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  width: 100%;
+  font-size: 16px;
+}
+
+.launch-button:hover {
+  background: #218838;
+}
+
+.search-filter-section {
+  margin-bottom: 30px;
+}
+
+.search-input {
+  width: 100%;
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+  padding: 12px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.category-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.category-filter {
+  background: #111;
+  border: 1px solid #333;
+  color: #888;
+  padding: 6px 12px;
+  border-radius: 16px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.category-filter:hover {
+  background: #222;
+  color: #fff;
+}
+
+.category-filter.active {
+  background: #222;
+  color: #fff;
+  border-color: #fff;
+} 
+
+.profile-upload-container {
+    position: relative;
+    width: 80px;
+    height: 80px;
+  }
+  
+  .profile-upload-label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+  }
+  
+  .profile-icon {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: #111;
+    border: 2px dashed #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.2s ease;
+  }
+  
+  .profile-icon:hover {
+    border-color: #fff;
+  }
+  
+  .profile-icon svg {
+    width: 60%;
+    height: 60%;
+    color: #666;
+  }
+  
+  .profile-preview {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+  
+  .profile-input {
+    display: none;
+  }
+
+.agent-name-input {
+  font-size: 1.2rem;
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  margin: 0 10px;
+  width: 200px;
+}
+
+.agent-name-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.agent-description {
+  width: 100%;
+  max-width: 600px;
+  background: transparent;
+  border: none;
+  color: #888;
+  text-align: center;
+  font-size: 1em;
+  resize: none;
+  min-height: 80px;
+  margin-top: 12px;
+  padding: 8px 12px;
+  transition: background-color 0.2s ease;
+}
+
+.agent-description:focus {
+  background: #111;
+  border: none;
+  outline: none;
+}
+
+.agent-description::placeholder {
+  color: #666;
+  text-align: center;
+} 

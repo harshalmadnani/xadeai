@@ -16,10 +16,11 @@ import CircularProgress from '@mui/material/CircularProgress';
 import SendIcon from '@mui/icons-material/Send';
 import AccountBalanceWalletIcon from '@mui/icons-material/AccountBalanceWallet';
 import WalletIcon from '@mui/icons-material/AccountBalanceWalletOutlined';
-import ChatIcon from '@mui/icons-material/Chat';
+import HistoryIcon from '@mui/icons-material/History';
 import CodeIcon from '@mui/icons-material/Code';
 import Terminal from './terminal';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
+import SettingsIcon from '@mui/icons-material/Settings';
 // Create a context for storing fetched data
 const DataContext = createContext(null);
 
@@ -68,6 +69,9 @@ const ChatInterfaceUI = ({
   handleOpenThesisDialog,
   handleCloseThesisDialog,
   handleSaveThesis,
+  isSettingsOpen,
+  handleOpenSettings,
+  handleCloseSettings,
 }) => (
   <div style={styles.chatInterface}>
     {renderDisclaimerDialog()}
@@ -92,39 +96,24 @@ const ChatInterfaceUI = ({
         />
       </div>
       <div style={{ display: 'flex', gap: '15px' }}>
-        <Button
-          onClick={handleOpenWalletDialog}
-          variant="outlined"
+        <IconButton
+          onClick={() => {}}  // Add history view handler if needed
           style={{
             color: 'white',
-            borderColor: 'rgba(255, 255, 255, 0.3)',
-            borderRadius: '12px',
-            textTransform: 'none',
-            padding: '8px 20px',
-            fontSize: '14px',
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            '&:hover': {
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              borderColor: 'rgba(255, 255, 255, 0.3)',
-            },
           }}
         >
-          Portfolio ({portfolioAddresses.length})
-        </Button>
-        <Button
-          onClick={handleOpenThesisDialog}
-          variant="outlined"
+          <HistoryIcon />
+        </IconButton>
+        <IconButton
+          onClick={handleOpenSettings}
           style={{
             color: 'white',
-            borderColor: 'rgba(255, 255, 255, 0.3)',
-            borderRadius: '12px',
-            textTransform: 'none',
-            padding: '8px 20px',
-            fontSize: '14px',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
           }}
         >
-          Investment Strategy
-        </Button>
+          <SettingsIcon />
+        </IconButton>
       </div>
     </div>
 
@@ -370,6 +359,14 @@ const ChatInterfaceUI = ({
       onClose={handleCloseThesisDialog}
       onSave={handleSaveThesis}
       currentThesis={customThesis}
+    />
+
+    <SettingsDialog
+      open={isSettingsOpen}
+      onClose={handleCloseSettings}
+      portfolioAddresses={portfolioAddresses}
+      handleOpenWalletDialog={handleOpenWalletDialog}
+      handleOpenThesisDialog={handleOpenThesisDialog}
     />
   </div>
 );
@@ -782,6 +779,115 @@ const AgentLauncher = ({ open, onClose }) => {
     </Dialog>
   );
 };
+
+// Add new Settings component
+const SettingsDialog = ({
+  open,
+  onClose,
+  portfolioAddresses,
+  handleOpenWalletDialog,
+  handleOpenThesisDialog,
+}) => (
+  <Dialog
+    open={open}
+    onClose={onClose}
+    maxWidth="sm"
+    fullWidth
+    PaperProps={{
+      style: {
+        backgroundColor: '#000000',
+        color: 'white',
+        borderRadius: '24px',
+        padding: '32px',
+        border: '1px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.5)'
+      }
+    }}
+  >
+    <DialogTitle style={{ 
+      color: 'white',
+      fontSize: '32px',
+      fontWeight: '600',
+      padding: '0 0 24px 0',
+      letterSpacing: '-0.5px'
+    }}>
+      Settings
+    </DialogTitle>
+
+    <DialogContent style={{ padding: '0' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+        <Button
+          onClick={() => {
+            handleOpenWalletDialog();
+            onClose();
+          }}
+          variant="outlined"
+          style={{
+            color: 'white',
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            borderRadius: '12px',
+            textTransform: 'none',
+            padding: '16px 20px',
+            fontSize: '14px',
+            justifyContent: 'space-between',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <WalletIcon />
+            <span>Portfolio Settings</span>
+          </div>
+          <span>({portfolioAddresses.length} addresses)</span>
+        </Button>
+
+        <Button
+          onClick={() => {
+            handleOpenThesisDialog();
+            onClose();
+          }}
+          variant="outlined"
+          style={{
+            color: 'white',
+            borderColor: 'rgba(255, 255, 255, 0.3)',
+            borderRadius: '12px',
+            textTransform: 'none',
+            padding: '16px 20px',
+            fontSize: '14px',
+            justifyContent: 'space-between',
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <RocketLaunchIcon />
+            <span>Investment Strategy</span>
+          </div>
+        </Button>
+      </div>
+    </DialogContent>
+
+    <DialogActions style={{ 
+      padding: '32px 0 0 0',
+      borderTop: '1px solid #222',
+      marginTop: '48px'
+    }}>
+      <Button 
+        onClick={onClose}
+        style={{
+          color: '#999',
+          backgroundColor: '#111',
+          borderRadius: '12px',
+          padding: '12px 24px',
+          textTransform: 'none',
+          fontSize: '15px',
+          fontWeight: '500',
+          border: '1px solid #222',
+        }}
+      >
+        Close
+      </Button>
+    </DialogActions>
+  </Dialog>
+);
 
 function ChatInterface() {
   const [input, setInput] = useState('');
@@ -2371,6 +2477,17 @@ if a user has question for social analysis or asks for a list of tokens respond 
     setIsThesisDialogOpen(false);
   };
 
+  // Add settings state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  const handleOpenSettings = () => {
+    setIsSettingsOpen(true);
+  };
+  
+  const handleCloseSettings = () => {
+    setIsSettingsOpen(false);
+  };
+
   return (
     <ChatInterfaceUI
       disclaimerAccepted={disclaimerAccepted}
@@ -2401,6 +2518,9 @@ if a user has question for social analysis or asks for a list of tokens respond 
       handleOpenThesisDialog={handleOpenThesisDialog}
       handleCloseThesisDialog={handleCloseThesisDialog}
       handleSaveThesis={handleSaveThesis}
+      isSettingsOpen={isSettingsOpen}
+      handleOpenSettings={handleOpenSettings}
+      handleCloseSettings={handleCloseSettings}
     />
   );
 }

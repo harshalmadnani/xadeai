@@ -28,7 +28,7 @@ function Terminal() {
           // First filter to top 1000 tokens by current rank
           const top1000Tokens = data.data
             .sort((a, b) => a.topic_rank - b.topic_rank)
-            .slice(0, 1000);
+            .slice(0, 100);
 
           // Calculate rank improvements and sort
           const tokensWithImprovement = top1000Tokens
