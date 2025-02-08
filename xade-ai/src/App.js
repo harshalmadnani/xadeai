@@ -40,13 +40,17 @@ function App() {
           display: 'none',
         },
         '& .MuiTab-root': {
-          minWidth: '50px',
-          width: '50px',
+          minWidth: '200px',
+          width: '200px',
           minHeight: '50px',
           padding: '12px',
           marginBottom: '12px',
           color: 'rgba(255, 255, 255, 0.5)',
           transition: 'all 0.2s ease',
+          display: 'flex',
+          flexDirection: 'row',
+          justifyContent: 'flex-start',
+          gap: '12px',
           '&.Mui-selected': {
             color: 'white',
             backgroundColor: 'rgba(255, 255, 255, 0.1)',
@@ -56,7 +60,9 @@ function App() {
       }}
     >
       <Tab 
-        icon={<ChatIcon sx={{ fontSize: 24 }} />} 
+        icon={<ChatIcon sx={{ fontSize: 24 }} />}
+        label="Chat"
+        iconPosition="start"
         aria-label="chat"
         sx={{ 
           '&:hover': {
@@ -67,7 +73,9 @@ function App() {
         }}
       />
       <Tab 
-        icon={<CodeIcon sx={{ fontSize: 24 }} />} 
+        icon={<CodeIcon sx={{ fontSize: 24 }} />}
+        label="Terminal"
+        iconPosition="start"
         aria-label="terminal"
         sx={{ 
           '&:hover': {
@@ -78,7 +86,9 @@ function App() {
         }}
       />
       <Tab 
-        icon={<RocketLaunchIcon sx={{ fontSize: 24 }} />} 
+        icon={<RocketLaunchIcon sx={{ fontSize: 24 }} />}
+        label="Agent Builder"
+        iconPosition="start"
         aria-label="agent-builder"
         sx={{ 
           '&:hover': {
@@ -101,13 +111,8 @@ function App() {
         width: '100%',
       }}>
         <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
           height: '60px',
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          backdropFilter: 'blur(10px)',
+          backgroundColor: 'rgba(0, 0, 0, 0.4)',
           borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
           alignItems: 'center',
@@ -125,8 +130,7 @@ function App() {
         <div style={{
           display: 'flex',
           flex: 1,
-          height: '100vh',
-          paddingTop: '60px',
+          height: 'calc(100vh - 60px)',
           position: 'relative',
         }}>
           {sidebarVisible && (
@@ -135,7 +139,7 @@ function App() {
                 onClick={() => setSidebarVisible(false)}
                 style={{
                   position: 'fixed',
-                  top: 0,
+                  top: '60px',
                   left: 0,
                   right: 0,
                   bottom: 0,
@@ -145,17 +149,16 @@ function App() {
               />
               <div style={{
                 position: 'fixed',
-                top: 0,
+                top: '60px',
                 left: 0,
                 bottom: 0,
-                width: isMobile ? '100%' : '80px',
-                backgroundColor: 'rgba(0, 0, 0, 0.85)',
-                backdropFilter: 'blur(10px)',
+                width: isMobile ? '100%' : '250px',
+                backgroundColor: 'rgba(0, 0, 0, 0.9)',
                 borderRight: '1px solid rgba(255, 255, 255, 0.1)',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: '80px 0 20px',
+                padding: '20px 0',
                 zIndex: 1000,
                 boxShadow: '4px 0 15px rgba(0, 0, 0, 0.3)',
                 transition: 'all 0.3s ease',
@@ -166,16 +169,6 @@ function App() {
                   alignItems: 'center',
                   width: '100%',
                 }}>
-                  <img 
-                    src="/1.png" 
-                    alt="Logo" 
-                    style={{
-                      width: '40px',
-                      height: '40px',
-                      marginBottom: '40px',
-                      borderRadius: '50%',
-                    }}
-                  />
                   <NavigationTabs />
                   <IconButton
                     onClick={() => setSidebarVisible(false)}
