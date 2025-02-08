@@ -181,7 +181,7 @@ function App() {
                       }
                     }}
                   >
-                    <CloseIcon />
+                   
                   </IconButton>
                 </div>
               </div>
