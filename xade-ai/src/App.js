@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { usePrivy } from '@privy-io/react-auth';
 import './App.css';
 import ChatInterface from './ChatInterface';
 import Terminal from './terminal';
@@ -12,6 +13,7 @@ import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 
 function App() {
+  const { ready, authenticated, login } = usePrivy();
   const [selectedTab, setSelectedTab] = useState(0);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [sidebarVisible, setSidebarVisible] = useState(false);
@@ -100,6 +102,42 @@ function App() {
       />
     </Tabs>
   );
+
+  // If Privy is not ready or user is not authenticated, show login button
+  if (!ready || !authenticated) {
+    return (
+      <div className="App" style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+      }}>
+        <button 
+          onClick={login}
+          disabled={!ready}
+          style={{
+            padding: '12px 24px',
+            fontSize: '16px',
+            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '8px',
+            color: 'white',
+            cursor: !ready ? 'not-allowed' : 'pointer',
+            transition: 'all 0.2s ease',
+          }}
+          onMouseOver={(e) => {
+            if (ready) e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
+          }}
+          onMouseOut={(e) => {
+            if (ready) e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
+          }}
+        >
+          {!ready ? 'Loading...' : 'Log in'}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="App">
