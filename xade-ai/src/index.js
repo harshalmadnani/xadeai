@@ -18,9 +18,9 @@ root.render(
         loginMethods: ['email', 'wallet'],
         // Customize Privy's appearance in your app
         appearance: {
-          theme: 'light',
-          accentColor: '#676FFF',
-          logo: 'https://your-logo-url',
+          theme: 'dark',
+          accentColor: '#fff',
+          logo: './XADE.png',
         },
         // Create embedded wallets for users who don't have a wallet
         embeddedWallets: {
