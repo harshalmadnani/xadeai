@@ -11,6 +11,7 @@ import AgentLauncher from './AgentLauncher';
 import MenuIcon from '@mui/icons-material/Menu';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import AgentDropdown from './dropdown';
 
 function App() {
   const { ready, authenticated, login } = usePrivy();
@@ -163,6 +164,7 @@ function App() {
           >
             <MenuIcon />
           </IconButton>
+          <AgentDropdown />
         </div>
 
         <div style={{
