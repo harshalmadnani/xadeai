@@ -159,7 +159,7 @@ function App() {
           }
         }}
       />
-      <Tab 
+      {/* <Tab 
         icon={<PersonIcon sx={{ fontSize: 24 }} />}
         label="Profile"
         iconPosition="start"
@@ -171,7 +171,7 @@ function App() {
             color: 'white',
           }
         }}
-      />
+      /> */}
     </Tabs>
   );
 
