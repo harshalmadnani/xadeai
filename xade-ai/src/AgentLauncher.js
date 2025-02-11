@@ -1,284 +1,423 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { IconButton } from '@mui/material';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import './AgentLauncher.css';
-import { FiUpload, FiSearch, FiX } from 'react-icons/fi';
 
 const AgentLauncher = () => {
-  const [agentData, setAgentData] = useState({
-    name: 'New Agent',
-    description: '',
-    profileImage: null,
-    prompt: '',
-    xUsername: '',
-    customPrompt: '',
-  });
-  const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
-
-  const [selectedDataSources, setSelectedDataSources] = useState([]);
-  const [selectedActions, setSelectedActions] = useState([]);
+  const [currentStep, setCurrentStep] = useState(0);
+  const [agentName, setAgentName] = useState('');
+  const [agentDescription, setAgentDescription] = useState('');
+  const [agentImage, setAgentImage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [characterizationMethod, setCharacterizationMethod] = useState('presets');
+  const containerRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  // Sample data - replace with actual data from your backend
+  const slides = [
+    { image: 'picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
+    { 
+      image: 'picture2.png', 
+      title: 'It all starts with a name', 
+      content: 'How should we call your Agent?',
+      hasForm: true 
+    },
+    { 
+      image: 'picture3.png', 
+      title: `Let's upload the picture\nof ${agentName || 'your agent'}`, 
+      content: '',
+      hasUpload: true 
+    },
+    { 
+      image: 'picture4.png', 
+      title: `What do you want ${agentName || 'your agent'} to do?`, 
+      content: 'Enter the prompt',
+      hasPrompt: true 
+    },
+    { 
+      image: 'picture5.png', 
+      title: `What data sources do you want\n${agentName || 'your agent'} to use?`, 
+      content: 'You can search for actions and sources',
+      hasDataSources: true 
+    },
+    { image: 'picture6.png', title: 'Step 6', content: 'Review settings' },
+    { 
+      image: 'picture7.png', 
+      title: `What kind of activity do you want\n${agentName || 'your agent'} to do?`, 
+      content: '',
+      hasActivities: true 
+    },
+  ];
+
   const dataSources = [
-    { id: 1, name: 'Market Data', category: 'Trading' },
-    { id: 2, name: 'Social Sentiment', category: 'Social' },
-    // Add more data sources
+    'Market data',
+    'Social sentiment',
+    'News feeds',
+    'Financial reports',
+    'Trading signals',
+    'Economic indicators',
+    'Company filings',
+    'Technical analysis'
   ];
 
-  const actions = [
-    { id: 1, name: 'Post Tweets', category: 'Social', tags: ['Twitter', 'Social'] },
-    { id: 2, name: 'Make Trades', category: 'Trading', tags: ['DeFi', 'Trading'] },
-    // Add more actions
-  ];
+  const filteredSources = dataSources.filter(source =>
+    source.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-  const categories = ['all', 'Trading', 'Social', 'DeFi'];
+  const handleNext = () => {
+    if (currentStep < slides.length - 1) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
 
-  // Add preset characterizations
-  const characterizationPresets = [
-    { id: 1, name: 'Professional Analyst' },
-    { id: 2, name: 'Casual Trader' },
-    { id: 3, name: 'Market Expert' },
-  ];
+  const handleBack = () => {
+    if (currentStep > 0) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
 
-  const handleProfileUpload = (event) => {
+  const handleFileUpload = (event) => {
     const file = event.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAgentData({ ...agentData, profileImage: reader.result });
-      };
-      reader.readAsDataURL(file);
+      if (file.size > 1024 * 1024) { // 1MB check
+        alert('File size must be less than 1MB');
+        return;
+      }
+      setAgentImage(file);
     }
   };
 
-  const handleImprovePrompt = () => {
-    if (!isImprovingPrompt) {
-      // Implement prompt improvement logic here
-      setIsImprovingPrompt(true);
-    } else {
-      // Handle finishing the improvement
-      setIsImprovingPrompt(false);
-    }
-  };
-
-  const handleGenerateFromX = () => {
-    // Implement X profile generation logic
-  };
-
-  const handleGenerateFromPrompt = () => {
-    // Implement custom prompt generation logic
-  };
-
-  const handleCharacterizationPreset = (preset) => {
-    // Implement preset selection logic
-    console.log(`Selected preset: ${preset.name}`);
-  };
-
-  const handleLaunch = () => {
-    // Implement launch logic
+  const handleUploadClick = () => {
+    fileInputRef.current.click();
   };
 
   return (
-    <div className="agent-launcher">
-      <div className="main-content">
-        {/* Profile and Basic Info Section */}
-        <div className="info-column">
-          <div className="profile-upload-container">
-            <label className="profile-upload-label">
-              <input
-                type="file"
-                className="profile-input"
-                onChange={handleProfileUpload}
-                accept="image/*"
-              />
-              {agentData.profileImage ? (
-                <img src={agentData.profileImage} alt="Profile" className="profile-preview" />
-              ) : (
-                <div className="profile-icon">
-                  <FiUpload />
-                </div>
-              )}
-            </label>
-          </div>
-          <input
-            type="text"
-            className="name-input-plain"
-            placeholder="Agent Name"
-            value={agentData.name}
-            onChange={(e) => setAgentData({ ...agentData, name: e.target.value })}
-          />
-          <textarea
-            className="description-input"
-            placeholder="Describe your agent's purpose..."
-            value={agentData.description}
-            onChange={(e) => setAgentData({ ...agentData, description: e.target.value })}
-            style={{ height: '60px' }}
-          />
-          <button className="configure-x">Configure X Account</button>
-        </div>
-
-        {/* Description and Prompt Section */}
-        <div className="section-label">Prompt</div>
-        <textarea
-          className="name-input"
-          placeholder="Enter agent prompt..."
-          value={agentData.prompt}
-          onChange={(e) => setAgentData({ ...agentData, prompt: e.target.value })}
-          style={{ height: '120px', width: '100%', marginBottom: '10px' }}
+    <div className="agent-launcher-container">
+      <div className="progress-bar-container">
+        <div 
+          className="progress-bar"
+          style={{
+            width: `${((currentStep + 1) / slides.length) * 100}%`,
+            height: '4px',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '2px',
+            transition: 'width 0.3s ease-in-out'
+          }}
         />
-        <button 
-          className="configure-x" 
-          onClick={handleImprovePrompt}
-          style={{ 
-            width: '100%', 
-            marginBottom: '20px',
-            backgroundColor: 'white',
-            color: 'black'
+        <div style={{ 
+          color: 'white', 
+          fontSize: '14px', 
+          marginTop: '8px',
+          textAlign: 'right'
+        }}>
+          {`Step ${currentStep + 1} of ${slides.length}`}
+        </div>
+      </div>
+
+      {currentStep > 0 && (
+        <IconButton 
+          className="back-button"
+          onClick={handleBack}
+          sx={{ 
+            color: 'white',
+            position: 'absolute',
+            top: '20px',
+            left: '40px',
+            zIndex: 1,
+            '@media (max-width: 768px)': {
+              display: 'none'
+            }
           }}
         >
-          {isImprovingPrompt ? 'Finish' : 'Improve Prompt'}
-        </button>
-
-        {/* Characterization Section */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px',marginBottom: '20px' }}>
-          <div className="section-label">Characterization</div>
-          <select 
-            className="name-input"
-            value={characterizationMethod}
-            onChange={(e) => setCharacterizationMethod(e.target.value)}
-            style={{ width: 'auto', padding: '5px 10px' }}
-          >
-            <option value="presets">Presets</option>
-            <option value="x">X Profile</option>
-            <option value="prompt">Custom Prompt</option>
-          </select>
-        </div>
-        
-        {/* Conditional rendering based on selected method */}
-        {characterizationMethod === 'presets' && (
-          <div className="characterization-presets" style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            {characterizationPresets.map((preset) => (
-              <button
-                key={preset.id}
-                className="configure-x"
-                onClick={() => handleCharacterizationPreset(preset)}
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {characterizationMethod === 'x' && (
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <input
-              type="text"
-              className="name-input"
-              placeholder="Enter X username"
-              value={agentData.xUsername}
-              onChange={(e) => setAgentData({ ...agentData, xUsername: e.target.value })}
-            />
-            <button className="configure-x" onClick={handleGenerateFromX}>
-              Generate from X
-            </button>
-          </div>
-        )}
-
-        {characterizationMethod === 'prompt' && (
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-            <input
-              type="text"
-              className="name-input"
-              placeholder="Enter custom prompt"
-              value={agentData.customPrompt}
-              onChange={(e) => setAgentData({ ...agentData, customPrompt: e.target.value })}
-            />
-            <button className="configure-x" onClick={handleGenerateFromPrompt}>
-              Generate from Prompt
-            </button>
-          </div>
-        )}
-
-        <div className="section-label">Data Sources</div>
-        {/* Search and Filter Section */}
-        <div className="search-filter-section">
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search actions and data sources..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <div className="category-filters">
-            {categories.map((category) => (
-              <button
-                key={category}
-                className={`category-filter ${activeCategory === category ? 'active' : ''}`}
-                onClick={() => setActiveCategory(category)}
-              >
-                {category.charAt(0).toUpperCase() + category.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Data Sources Section */}
-        <div className="data-sources">
-          {dataSources.map((source) => (
-            <div
-              key={source.id}
-              className={`source-item ${selectedDataSources.includes(source.id) ? 'selected' : ''}`}
-              onClick={() => {
-                setSelectedDataSources(
-                  selectedDataSources.includes(source.id)
-                    ? selectedDataSources.filter((id) => id !== source.id)
-                    : [...selectedDataSources, source.id]
-                )
-              }}
-            >
-              {source.name}
+          <ArrowBackIcon />
+        </IconButton>
+      )}
+      
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStep}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.5 }}
+          className="slide-container"
+        >
+          <div className="slide-content">
+            <div className="image-container">
+              <img 
+                src={slides[currentStep].image} 
+                alt={`Step ${currentStep + 1}`}
+                className="slide-image"
+                style={{ 
+                  width: '90%',
+                  height: '50%',
+                  objectFit: "contain",
+                  borderRadius: '12px'
+                }}
+              />
+   
             </div>
-          ))}
-        </div>
-
-        {/* Actions Section */}
-        <div className="section-label">Actions</div>
-        <div className="actions-list">
-          {actions.map((action) => (
-            <div
-              key={action.id}
-              className={`action-item ${selectedActions.includes(action.id) ? 'selected' : ''}`}
-              onClick={() => {
-                setSelectedActions(
-                  selectedActions.includes(action.id)
-                    ? selectedActions.filter((id) => id !== action.id)
-                    : [...selectedActions, action.id]
-                )
-              }}
-            >
-              <div className="action-header">
-                <span>{action.name}</span>
-                <button className="action-toggle">
-                  {selectedActions.includes(action.id) ? <FiX /> : '+'}
-                </button>
-              </div>
-              <div className="action-tags">
-                {action.tags.map((tag) => (
-                  <span key={tag} className="tag">
-                    {tag}
-                  </span>
-                ))}
-              </div>
+            
+            <div className="content-container">
+              <h2 style={{ marginBottom: '1.5rem' }}>{slides[currentStep].title}</h2>
+              {slides[currentStep].hasForm ? (
+                <>
+                  <p>{slides[currentStep].content}</p>
+                  <input
+                    type="text"
+                    value={agentName}
+                    onChange={(e) => setAgentName(e.target.value)}
+                    placeholder="Enter agent name"
+                    style={{
+                      width: '90%',
+                      padding: '10px 12px',
+                      marginBottom: '16px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      height: '40px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <p>{`What should people know about ${agentName || 'your agent'}?`}</p>
+                  <textarea
+                    value={agentDescription}
+                    onChange={(e) => setAgentDescription(e.target.value)}
+                    placeholder="Add some description about the agent that everyone will see"
+                    style={{
+                      width: '90%',
+                      padding: '12px',
+                      marginBottom: '20px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      minHeight: '50%',
+                      resize: 'vertical'
+                    }}
+                  />
+                </>
+              ) : slides[currentStep].hasUpload ? (
+                <>
+                  <p>{slides[currentStep].content}</p>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileUpload}
+                    accept="image/*"
+                    style={{ display: 'none' }}
+                  />
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button 
+                      className="next-button"
+                      onClick={handleUploadClick}
+                      style={{ flex: 1 }}
+                    >
+                      Upload
+                    </button>
+                    <button 
+                      className="next-button"
+                      onClick={handleNext}
+                      style={{ 
+                        flex: 1,
+                        backgroundColor: 'transparent',
+                        border: '1px solid white',
+                        color:'#FFF'
+                      }}
+                    >
+                      Maybe later
+                    </button>
+                  </div>
+                  {agentImage && (
+                    <p style={{ marginTop: '10px', color: 'green' }}>
+                      Image uploaded: {agentImage.name}
+                    </p>
+                  )}
+                </>
+              ) : slides[currentStep].hasPrompt ? (
+                <>
+                  <p>{slides[currentStep].content}</p>
+                  <textarea
+                    placeholder="Be as specific as possible"
+                    style={{
+                      width: '90%',
+                      padding: '12px',
+                      marginBottom: '20px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      minHeight: '150px',
+                      resize: 'vertical',
+                      fontSize: '14px'
+                    }}
+                  />
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    color: '#666',
+                    fontSize: '14px',
+                    marginBottom: '20px'
+                  }}>
+                    <span style={{ 
+                      cursor: 'pointer',
+                      backgroundColor: '#1a1a1a',
+                      padding: '8px 12px',
+                      borderRadius: '20px',
+                      display: 'flex',
+                      alignItems: 'center'
+                    }}>
+                      <img src="pen-loading.png" alt="Improve" style={{ verticalAlign: 'middle', marginRight: '5px' }} />
+                      Improve Prompt
+                    </span>
+                  </div>
+                </>
+              ) : slides[currentStep].hasDataSources ? (
+                <>
+                  <p>{slides[currentStep].content}</p>
+                  <div style={{
+                    width: '90%',
+                    marginBottom: '20px'
+                  }}>
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="What are you looking for?"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        height: '40px',
+                        fontSize: '14px',
+                        marginBottom: '16px'
+                      }}
+                    />
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px',
+                      marginBottom: '20px'
+                    }}>
+                      {filteredSources.map((source, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            backgroundColor: '#1a1a1a',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            color: 'white',
+                            fontSize: '14px',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          {source}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : slides[currentStep].hasActivities ? (
+                <>
+                  <p>{slides[currentStep].content}</p>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '20px',
+                    width: '90%'
+                  }}>
+                    <div style={{
+                      display: 'flex',
+                      gap: '16px'
+                    }}>
+                      <div style={{
+                        flex: 1,
+                        backgroundColor: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        cursor: 'pointer'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Post on X</span>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            border: '2px solid white'
+                          }} />
+                        </div>
+                        <img 
+                          src="picture8.png" 
+                          alt="Post on X" 
+                          style={{
+                            width: '100%',
+                            marginTop: '12px',
+                            borderRadius: '8px'
+                          }}
+                        />
+                      </div>
+                      <div style={{
+                        flex: 1,
+                        backgroundColor: '#1a1a1a',
+                        padding: '16px',
+                        borderRadius: '12px',
+                        cursor: 'pointer'
+                      }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span>Make Trades</span>
+                          <div style={{
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '50%',
+                            border: '2px solid white'
+                          }} />
+                        </div>
+                        <img 
+                          src="picture9.png" 
+                          alt="Make Trades" 
+                          style={{
+                            width: '100%',
+                            marginTop: '12px',
+                            borderRadius: '8px'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <button 
+                      className="next-button"
+                      onClick={handleNext}
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'white',
+                        color: 'black'
+                      }}
+                    >
+                      Review and Bring {agentName || 'your agent'} to Life
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
+              )}
+              <button 
+                className="next-button"
+                onClick={handleNext}
+                disabled={currentStep === slides.length - 1}
+                style={{ 
+                  marginTop: '1rem',
+                  display: currentStep === slides.length - 1 ? 'none' : 'block' 
+                }}
+              >
+                {currentStep === 0 ? "Let's get started" : 'Continue'}
+              </button>
             </div>
-          ))}
-        </div>
-
-        {/* Launch Button */}
-        <button className="launch-button" onClick={handleLaunch}>
-          Launch Agent
-        </button>
-      </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
     </div>
   );
 };

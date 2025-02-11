@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import './index.css';
-
+import './fonts.css';
 import {PrivyProvider} from '@privy-io/react-auth';
 
 import App from './App';
