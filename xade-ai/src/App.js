@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import ChatInterface from './ChatInterface';
 import Terminal from './terminal';
@@ -12,10 +13,18 @@ import MenuIcon from '@mui/icons-material/Menu';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
 import AgentDropdown from './dropdown';
+import Agentboard from './agentboard';
+import profile from './profile';
+import DashboardIcon from '@mui/icons-material/Leaderboard';
+import PersonIcon from '@mui/icons-material/Person';
 
 function App() {
   const { ready, authenticated, login } = usePrivy();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [selectedAgentName, setSelectedAgentName] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
@@ -27,6 +36,42 @@ function App() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const getTabName = (index) => {
+    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board', 'Profile'];
+    return tabs[index] || '';
+  };
+
+  useEffect(() => {
+    const tabName = getTabName(selectedTab).toLowerCase().replace(' ', '-');
+    let agentParam = '';
+    
+    if (selectedAgent && selectedAgentName) {
+      const formattedAgentName = selectedAgentName.toLowerCase().replace(/\s+/g, '-');
+      agentParam = `/${selectedAgent}-${formattedAgentName}`;
+    }
+    
+    navigate(`/${tabName}${agentParam}`, { replace: true });
+  }, [selectedTab, selectedAgent, selectedAgentName, navigate]);
+
+  // Add effect to sync URL with state on page load
+  useEffect(() => {
+    const pathParts = location.pathname.slice(1).split('/');
+    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board', 'profile'];
+    const tabIndex = tabs.indexOf(pathParts[0]);
+    if (tabIndex !== -1) {
+      setSelectedTab(tabIndex);
+    }
+
+    if (pathParts[1]) {
+      const [agentId, ...agentNameParts] = pathParts[1].split('-');
+      setSelectedAgent(agentId);
+      if (agentNameParts.length > 0) {
+        const agentName = agentNameParts.join('-');
+        setSelectedAgentName(agentName);
+      }
+    }
+  }, [location]);
 
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
@@ -101,8 +146,39 @@ function App() {
           }
         }}
       />
+      <Tab 
+        icon={<DashboardIcon sx={{ fontSize: 24 }} />}
+        label="Agent Board"
+        iconPosition="start"
+        aria-label="agent-board"
+        sx={{ 
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            color: 'white',
+          }
+        }}
+      />
+      <Tab 
+        icon={<PersonIcon sx={{ fontSize: 24 }} />}
+        label="Profile"
+        iconPosition="start"
+        aria-label="profile"
+        sx={{ 
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            color: 'white',
+          }
+        }}
+      />
     </Tabs>
   );
+
+  // Modify AgentDropdown to update selectedAgent
+  const handleAgentChange = (agent) => {
+    setSelectedAgent(agent);
+  };
 
   // If Privy is not ready or user is not authenticated, show login button
   if (!ready || !authenticated) {
@@ -164,7 +240,7 @@ function App() {
           >
             <MenuIcon />
           </IconButton>
-          <AgentDropdown />
+          <AgentDropdown onAgentChange={handleAgentChange} />
         </div>
 
         <div style={{
@@ -240,8 +316,12 @@ function App() {
               <ChatInterface />
             ) : selectedTab === 1 ? (
               <Terminal />
-            ) : (
+            ) : selectedTab === 2 ? (
               <AgentLauncher />
+            ) : selectedTab === 3 ? (
+              <Agentboard />
+            ) : (
+              <profile />
             )}
           </div>
         </div>

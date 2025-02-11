@@ -1,5 +1,7 @@
 .App {
   text-align: center;
+  font-family: 'GeneralSans', sans-serif;
+  background-color: #000;
 }
 
 .App-logo {
@@ -41,7 +43,7 @@
   max-width: 800px;
   margin: 0 auto;
   padding: 20px;
-  
+  font-family: 'GeneralSans', sans-serif;
 }
 
 .message-list {

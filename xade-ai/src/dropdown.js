@@ -5,9 +5,9 @@ const supabaseUrl = 'https://wbsnlpviggcnwqfyfobh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indic25scHZpZ2djbndxZnlmb2JoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODc2NTcwNiwiZXhwIjoyMDU0MzQxNzA2fQ.tr6PqbiAXQYSQSpG2wS6I4DZfV1Gc3dLXYhKwBrJLS0';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const AgentDropdown = () => {
+const AgentDropdown = ({ onAgentSelect }) => {
   const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState(1);
+  const [selectedAgent, setSelectedAgent] = useState('1');
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -30,9 +30,13 @@ const AgentDropdown = () => {
   const handleSelect = (agentId) => {
     setSelectedAgent(agentId);
     setIsOpen(false);
+    if (onAgentSelect) {
+      const selectedAgent = agents.find(agent => agent.id === agentId);
+      onAgentSelect(agentId, selectedAgent?.agent_name);
+    }
   };
 
-  const selectedAgentData = agents.find(agent => agent.id === parseInt(selectedAgent));
+  const selectedAgentData = agents.find(agent => agent.id === selectedAgent);
 
   return (
     <div style={{ position: 'relative', width: '200px' }}>

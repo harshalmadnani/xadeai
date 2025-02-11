@@ -1,5 +1,5 @@
 .agent-launcher {
-  background-color: #000;
+  background-color: #000 !important;
   color: #ffffff;
   padding: 20px;
   height: 100%;
@@ -324,4 +324,12 @@ select.name-input option {
   background: #111;
   color: white;
   padding: 8px;
+}
+
+.screen {
+  background-color: #000 !important;
+}
+
+body {
+  background-color: #000;
 }
