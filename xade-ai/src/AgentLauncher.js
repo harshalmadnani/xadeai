@@ -39,7 +39,12 @@ const AgentLauncher = () => {
       content: 'You can search for actions and sources',
       hasDataSources: true 
     },
-    { image: 'picture6.png', title: 'Step 6', content: 'Review settings' },
+    { 
+      image: 'picture6.png', 
+      title: `Would you like to\nconfigure X account\nfor ${agentName || 'your agent'} now?`, 
+      content: '',
+      hasXConfig: true 
+    },
     { 
       image: 'picture7.png', 
       title: `What kind of activity do you want\n${agentName || 'your agent'} to do?`, 
@@ -400,6 +405,31 @@ const AgentLauncher = () => {
                     </button>
                   </div>
                 </>
+              ) : slides[currentStep].hasXConfig ? (
+                <>
+                  <p>{slides[currentStep].content}</p>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                    <button 
+                      className="next-button"
+                      onClick={handleNext}
+                      style={{ flex: 1 }}
+                    >
+                      Let's do this
+                    </button>
+                    <button 
+                      className="next-button"
+                      onClick={handleNext}
+                      style={{ 
+                        flex: 1,
+                        backgroundColor: 'transparent',
+                        border: '1px solid white',
+                        color: '#FFF'
+                      }}
+                    >
+                      Maybe later
+                    </button>
+                  </div>
+                </>
               ) : (
                 <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
               )}
@@ -409,7 +439,7 @@ const AgentLauncher = () => {
                 disabled={currentStep === slides.length - 1}
                 style={{ 
                   marginTop: '1rem',
-                  display: currentStep === slides.length - 1 ? 'none' : 'block' 
+                  display: (currentStep === slides.length - 1 || currentStep === 5) ? 'none' : 'block' 
                 }}
               >
                 {currentStep === 0 ? "Let's get started" : 'Continue'}
