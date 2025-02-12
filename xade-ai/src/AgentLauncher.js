@@ -14,39 +14,39 @@ const AgentLauncher = () => {
   const fileInputRef = useRef(null);
 
   const slides = [
-    { image: 'picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
+    { image: '/picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
     { 
-      image: 'picture2.png', 
+      image: '/picture2.png', 
       title: 'It all starts with a name', 
       content: 'How should we call your Agent?',
       hasForm: true 
     },
     { 
-      image: 'picture3.png', 
+      image: '/picture3.png', 
       title: `Let's upload the picture\nof ${agentName || 'your agent'}`, 
       content: '',
       hasUpload: true 
     },
     { 
-      image: 'picture4.png', 
+      image: '/picture4.png', 
       title: `What do you want ${agentName || 'your agent'} to do?`, 
       content: 'Enter the prompt',
       hasPrompt: true 
     },
     { 
-      image: 'picture5.png', 
+      image: '/picture5.png', 
       title: `What data sources do you want\n${agentName || 'your agent'} to use?`, 
       content: 'You can search for actions and sources',
       hasDataSources: true 
     },
     { 
-      image: 'picture6.png', 
+      image: '/picture6.png', 
       title: `Would you like to\nconfigure X account\nfor ${agentName || 'your agent'} now?`, 
       content: '',
       hasXConfig: true 
     },
     { 
-      image: 'picture7.png', 
+      image: '/picture7.png', 
       title: `What kind of activity do you want\n${agentName || 'your agent'} to do?`, 
       content: '',
       hasActivities: true 

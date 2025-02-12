@@ -17,16 +17,18 @@ import Agentboard from './agentboard';
 import profile from './profile';
 import DashboardIcon from '@mui/icons-material/Leaderboard';
 import PersonIcon from '@mui/icons-material/Person';
+import { supabase } from './lib/supabase';
 
 function App() {
   const { ready, authenticated, login } = usePrivy();
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedTab, setSelectedTab] = useState(0);
-  const [selectedAgent, setSelectedAgent] = useState(null);
-  const [selectedAgentName, setSelectedAgentName] = useState(null);
+  const [selectedAgent, setSelectedAgent] = useState(1);
+  const [selectedAgentName, setSelectedAgentName] = useState('ALPHACHAD');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [agents, setAgents] = useState([]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -37,39 +39,58 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('agents')
+          .select('id,agent_name,image')
+          .order('id', { ascending: true });
+        
+        if (error) throw error;
+        setAgents(data);
+      } catch (error) {
+        console.error('Error fetching agents:', error);
+      }
+    };
+    
+    fetchAgents();
+  }, []);
+
   const getTabName = (index) => {
-    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board', 'Profile'];
+    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board'];
     return tabs[index] || '';
   };
 
   useEffect(() => {
-    const tabName = getTabName(selectedTab).toLowerCase().replace(' ', '-');
+    const tabName = getTabName(selectedTab).toLowerCase().replace(/\s+/g, '-');
     let agentParam = '';
     
-    if (selectedAgent && selectedAgentName) {
-      const formattedAgentName = selectedAgentName.toLowerCase().replace(/\s+/g, '-');
-      agentParam = `/${selectedAgent}-${formattedAgentName}`;
+    // Only add agent parameter for Chat and Terminal tabs
+    if (selectedTab === 0 || selectedTab === 1) {
+      if (selectedAgent && selectedAgentName) {
+        const formattedAgentName = selectedAgentName.toLowerCase().replace(/\s+/g, '-');
+        agentParam = `/${formattedAgentName}`;
+      }
     }
     
     navigate(`/${tabName}${agentParam}`, { replace: true });
   }, [selectedTab, selectedAgent, selectedAgentName, navigate]);
 
-  // Add effect to sync URL with state on page load
+  // Update URL parsing logic
   useEffect(() => {
     const pathParts = location.pathname.slice(1).split('/');
-    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board', 'profile'];
+    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board'];
     const tabIndex = tabs.indexOf(pathParts[0]);
+    
     if (tabIndex !== -1) {
       setSelectedTab(tabIndex);
     }
 
-    if (pathParts[1]) {
-      const [agentId, ...agentNameParts] = pathParts[1].split('-');
-      setSelectedAgent(agentId);
-      if (agentNameParts.length > 0) {
-        const agentName = agentNameParts.join('-');
-        setSelectedAgentName(agentName);
-      }
+    // Only set agent name for Chat and Terminal tabs
+    if (pathParts[1] && (tabIndex === 0 || tabIndex === 1)) {
+      const agentName = pathParts[1];
+      setSelectedAgentName(agentName.toUpperCase());
     }
   }, [location]);
 
@@ -159,19 +180,6 @@ function App() {
           }
         }}
       />
-      {/* <Tab 
-        icon={<PersonIcon sx={{ fontSize: 24 }} />}
-        label="Profile"
-        iconPosition="start"
-        aria-label="profile"
-        sx={{ 
-          '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            color: 'white',
-          }
-        }}
-      /> */}
     </Tabs>
   );
 
@@ -240,7 +248,16 @@ function App() {
           >
             <MenuIcon />
           </IconButton>
-          <AgentDropdown onAgentChange={handleAgentChange} />
+          {selectedTab !== 2 && selectedTab !== 3 && (
+            <AgentDropdown 
+              onAgentSelect={(id, name) => {
+                setSelectedAgent(id);
+                setSelectedAgentName(name);
+              }} 
+              defaultAgent={1}
+              defaultAgentName="ALPHACHAD"
+            />
+          )}
         </div>
 
         <div style={{
@@ -313,15 +330,13 @@ function App() {
             width: '100%'
           }}>
             {selectedTab === 0 ? (
-              <ChatInterface />
+              <ChatInterface selectedAgent={agents.find(agent => agent.id === selectedAgent)} />
             ) : selectedTab === 1 ? (
               <Terminal />
             ) : selectedTab === 2 ? (
               <AgentLauncher />
-            ) : selectedTab === 3 ? (
-              <Agentboard />
             ) : (
-              <profile />
+              <Agentboard />
             )}
           </div>
         </div>

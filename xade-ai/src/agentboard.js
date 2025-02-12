@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { FaTwitter, FaComments, FaTerminal } from 'react-icons/fa';
 import { IoClose } from 'react-icons/io5';
+import { useNavigate } from 'react-router-dom';
 
 const supabaseUrl = 'https://wbsnlpviggcnwqfyfobh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indic25scHZpZ2djbndxZnlmb2JoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODc2NTcwNiwiZXhwIjoyMDU0MzQxNzA2fQ.tr6PqbiAXQYSQSpG2wS6I4DZfV1Gc3dLXYhKwBrJLS0';
@@ -11,6 +12,7 @@ function Agentboard() {
   const [agents, setAgents] = useState([]);
   const [selectedAgent, setSelectedAgent] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAgents();
@@ -29,74 +31,131 @@ function Agentboard() {
   };
 
   return (
-    <>
+    <div style={{
+      minHeight: '100vh',
+      background: '#000000',
+      width: '100%'
+    }}>
+      <h1 style={{
+        fontSize: '3rem',
+        color: 'white',
+        textAlign: 'center',
+        margin: '2rem 0'
+      }}>Agent Board</h1>
+
       <div style={{
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
-        gap: '1rem',
-        padding: '1rem'
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: '1.5rem',
+        padding: '2rem',
+        maxWidth: '1400px',
+        margin: '0 auto'
       }}>
         {agents.map((agent) => (
           <div key={agent.id} style={{
-            backgroundColor: '#1f2937',
-            borderRadius: '0.5rem',
-            padding: '1rem',
+            backgroundColor: '#121212',
+            borderRadius: '1rem',
+            padding: '1.5rem',
             display: 'flex',
-            flexDirection: 'column'
+            flexDirection: 'column',
+            gap: '1rem',
+            cursor: 'pointer',
+            transition: 'transform 0.2s',
+            ':hover': {
+              transform: 'scale(1.02)'
+            }
+          }}
+          onClick={() => {
+            setSelectedAgent(agent);
+            setShowModal(true);
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <img
                 src={agent.image}
                 alt={agent.agent_name}
                 style={{
-                  width: '4rem',
-                  height: '4rem',
+                  width: '3.5rem',
+                  height: '3.5rem',
                   borderRadius: '50%',
                   objectFit: 'cover'
                 }}
               />
-              <div style={{ flex: 1 }}>
-                <h3 style={{ 
-                  fontSize: '1.25rem',
-                  fontWeight: 'bold',
-                  color: 'white'
-                }}>{agent.agent_name}</h3>
-                <div style={{ 
-                  display: 'flex',
-                  gap: '0.75rem',
-                  marginTop: '0.5rem'
-                }}>
-                  <FaTwitter style={{ color: '#60a5fa', cursor: 'pointer' }} />
-                  <FaComments style={{ color: '#4ade80', cursor: 'pointer' }} />
-                  <FaTerminal style={{ color: '#c084fc', cursor: 'pointer' }} />
-                </div>
-              </div>
+              <img 
+                src="1111.png"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/chat');
+                }}
+                style={{ 
+                  width: '2.5rem',
+                  height: '2.5rem',
+                  cursor: 'pointer'
+                }} 
+                alt="chat"
+              />
             </div>
-            <p style={{
-              marginTop: '1rem',
-              color: '#d1d5db',
-              display: '-webkit-box',
-              WebkitLineClamp: '2',
-              WebkitBoxOrient: 'vertical',
-              overflow: 'hidden',
-              cursor: 'pointer'
-            }}
-              onClick={() => {
-                setSelectedAgent(agent);
-                setShowModal(true);
-              }}>
-              {agent.description}
-            </p>
+            
+            <div>
+              <h3 style={{ 
+                fontSize: '1.5rem',
+                fontWeight: '600',
+                color: 'white',
+                marginBottom: '0.5rem',
+                textAlign: 'left',
+                fontFamily: 'GeneralSans-Medium'
+              }}>{agent.agent_name}</h3>
+              <p style={{
+                color: '#888',
+                fontSize: '0.9rem',
+                lineHeight: '1.4',
+                marginBottom: '1rem',
+                textAlign: 'left',
+                fontFamily: 'GeneralSans-Medium'
+              }}>{agent.description}</p>
+            </div>
+
+            <div style={{ 
+              display: 'flex',
+              gap: '0.75rem'
+            }}>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(agent.twitter, '_blank');
+                }}
+                style={{
+                  backgroundColor: '#222',
+                  color: '#888',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9rem',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}>Follow on X</button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  navigate('/terminal');
+                }}
+                style={{
+                  backgroundColor: '#222',
+                  color: '#888',
+                  padding: '0.5rem 1rem',
+                  borderRadius: '0.5rem',
+                  fontSize: '0.9rem',
+                  border: 'none',
+                  cursor: 'pointer'
+                }}>Terminal</button>
+            </div>
           </div>
         ))}
       </div>
 
-      {/* Modal */}
       {showModal && selectedAgent && (
         <div style={{
           position: 'fixed',
           inset: 0,
-          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -104,9 +163,9 @@ function Agentboard() {
           zIndex: 50
         }}>
           <div style={{
-            backgroundColor: '#1f2937',
-            borderRadius: '0.5rem',
-            padding: '1.5rem',
+            backgroundColor: '#121212',
+            borderRadius: '1rem',
+            padding: '2rem',
             maxWidth: '42rem',
             width: '100%',
             maxHeight: '90vh',
@@ -154,7 +213,7 @@ function Agentboard() {
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }
 

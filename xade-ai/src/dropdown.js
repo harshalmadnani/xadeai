@@ -7,7 +7,7 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 
 const AgentDropdown = ({ onAgentSelect }) => {
   const [agents, setAgents] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState('1');
+  const [selectedAgent, setSelectedAgent] = useState(1);
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
@@ -18,7 +18,8 @@ const AgentDropdown = ({ onAgentSelect }) => {
     try {
       const { data, error } = await supabase
         .from('agents')
-        .select('id,agent_name,image');
+        .select('id,agent_name,image')
+        .order('id', { ascending: true });
       
       if (error) throw error;
       setAgents(data);

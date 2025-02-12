@@ -72,6 +72,7 @@ const ChatInterfaceUI = ({
   isSettingsOpen,
   handleOpenSettings,
   handleCloseSettings,
+  selectedAgent
 }) => (
   <div style={{
     ...styles.chatInterface,
@@ -190,7 +191,7 @@ const ChatInterfaceUI = ({
             handleSubmit(e);
           }
         }}
-        placeholder="Ask me anything about crypto..."
+        placeholder={selectedAgent?.name ? `Ask ${selectedAgent.name} anything...` : "Ask me anything about crypto..."}
         disabled={isLoading}
         multiline
         maxRows={3}
@@ -328,7 +329,7 @@ const ChatInterfaceUI = ({
 
 // Add AgentLauncher component before ChatInterfaceUI
 
-function ChatInterface() {
+function ChatInterface({ selectedAgent }) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -392,8 +393,8 @@ function ChatInterface() {
     }}>
       {message.role === 'assistant' && (
         <img 
-          src='/1.png'
-          alt="Xade AI" 
+          src={selectedAgent?.image || '/1.png'}
+          alt={selectedAgent?.agent_name || "Xade AI"}
           style={{
             width: '32px',
             height: '32px',
@@ -461,7 +462,7 @@ function ChatInterface() {
               handleSubmit(e);
             }
           }}
-          placeholder="Ask me anything about crypto..."
+          placeholder={selectedAgent?.name ? `Ask ${selectedAgent.name} anything...` : "Ask me anything about crypto..."}
           disabled={isLoading}
           multiline
           maxRows={3}
