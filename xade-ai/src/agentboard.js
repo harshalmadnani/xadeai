@@ -84,7 +84,7 @@ function Agentboard() {
                 src="1111.png"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate('/chat');
+                  navigate(`/chat/${agent.agent_name}`);
                 }}
                 style={{ 
                   width: '2.5rem',
@@ -118,10 +118,12 @@ function Agentboard() {
               display: 'flex',
               gap: '0.75rem'
             }}>
-              <button 
+              <a 
+                href={agent?.twitter}
+                target="_blank"
+                rel="noopener noreferrer"
                 onClick={(e) => {
                   e.stopPropagation();
-                  window.open(agent.twitter, '_blank');
                 }}
                 style={{
                   backgroundColor: '#222',
@@ -130,12 +132,14 @@ function Agentboard() {
                   borderRadius: '0.5rem',
                   fontSize: '0.9rem',
                   border: 'none',
-                  cursor: 'pointer'
-                }}>Follow on X</button>
+                  cursor: 'pointer',
+                  textDecoration: 'none',
+                  display: 'inline-block'
+                }}>Follow on X</a>
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate('/terminal');
+                  navigate(`/terminal/${agent.agent_name}`);
                 }}
                 style={{
                   backgroundColor: '#222',

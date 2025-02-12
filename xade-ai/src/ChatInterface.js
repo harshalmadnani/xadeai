@@ -344,7 +344,7 @@ function ChatInterface({ selectedAgent }) {
         messages: [
           { 
             role: "system",
-            content: "You are Xade AI, a helpful assistant focused on cryptocurrency and blockchain technology."
+            content: "You are Alphachad, a helpful assistant focused on cryptocurrency and blockchain technology."
           },
           { role: "user", content: userInput }
         ],

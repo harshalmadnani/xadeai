@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import './AgentLauncher.css';
+import { useNavigate } from 'react-router-dom';
+
 
 const AgentLauncher = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -10,9 +12,19 @@ const AgentLauncher = () => {
   const [agentDescription, setAgentDescription] = useState('');
   const [agentImage, setAgentImage] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSources, setSelectedSources] = useState([]);
+  const [selectedActivities, setSelectedActivities] = useState([]);
+  const [prompt, setPrompt] = useState('');
+  const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
-
+  const navigate = useNavigate();
+  const Groq = require('groq-sdk');
+  const groq = new Groq({
+    apiKey: process.env.REACT_APP_GROQ_API_KEY,
+    dangerouslyAllowBrowser: true 
+  });
+  
   const slides = [
     { image: '/picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
     { 
@@ -51,6 +63,18 @@ const AgentLauncher = () => {
       content: '',
       hasActivities: true 
     },
+    {
+      image: '/picture10.png',
+      title: 'Review',
+      content: '',
+      hasReview: true
+    },
+    {
+      image: '/picture11.png',
+      title: `${agentName || 'Your agent'} is live`,
+      content: 'Congratulations, you\'ve just created a new agent!',
+      hasSuccess: true
+    }
   ];
 
   const dataSources = [
@@ -93,6 +117,48 @@ const AgentLauncher = () => {
 
   const handleUploadClick = () => {
     fileInputRef.current.click();
+  };
+
+  const handleSourceClick = (source) => {
+    setSelectedSources(prev => 
+      prev.includes(source) 
+        ? prev.filter(s => s !== source)
+        : [...prev, source]
+    );
+  };
+
+  const handleActivitySelect = (activity) => {
+    setSelectedActivities(prev => 
+      prev.includes(activity) 
+        ? prev.filter(a => a !== activity)
+        : [...prev, activity]
+    );
+  };
+
+  const improvePrompt = async () => {
+    setIsImprovingPrompt(true);
+    try {
+      const response = await groq.chat.completions.create({
+        model: "mixtral-8x7b-32768",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert at improving AI agent prompts. Make the provided prompt more specific, detailed, and effective while maintaining its core intent."
+          },
+          {
+            role: "user",
+            content: `Please improve this AI agent prompt: "${prompt}"`
+          }
+        ],
+        temperature: 0.7
+      });
+      setPrompt(response.choices[0].message.content);
+    } catch (error) {
+      console.error('Error improving prompt:', error);
+      alert('Failed to improve prompt');
+    } finally {
+      setIsImprovingPrompt(false);
+    }
   };
 
   return (
@@ -212,7 +278,7 @@ const AgentLauncher = () => {
                     accept="image/*"
                     style={{ display: 'none' }}
                   />
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px', marginBottom: '20px' }}>
                     <button 
                       className="next-button"
                       onClick={handleUploadClick}
@@ -238,11 +304,23 @@ const AgentLauncher = () => {
                       Image uploaded: {agentImage.name}
                     </p>
                   )}
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{ 
+                      marginTop: '20px',
+                      width: '100%'
+                    }}
+                  >
+                    Continue
+                  </button>
                 </>
               ) : slides[currentStep].hasPrompt ? (
                 <>
                   <p>{slides[currentStep].content}</p>
                   <textarea
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
                     placeholder="Be as specific as possible"
                     style={{
                       width: '90%',
@@ -265,16 +343,25 @@ const AgentLauncher = () => {
                     fontSize: '14px',
                     marginBottom: '20px'
                   }}>
-                    <span style={{ 
-                      cursor: 'pointer',
-                      backgroundColor: '#1a1a1a',
-                      padding: '8px 12px',
-                      borderRadius: '20px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      <img src="pen-loading.png" alt="Improve" style={{ verticalAlign: 'middle', marginRight: '5px' }} />
-                      Improve Prompt
+                    <span 
+                      onClick={improvePrompt}
+                      style={{ 
+                        cursor: 'pointer',
+                        backgroundColor: '#1a1a1a',
+                        padding: '8px 12px',
+                        borderRadius: '20px',
+                        display: 'flex',
+                        alignItems: 'center'
+                      }}
+                    >
+                      {isImprovingPrompt ? (
+                        <span>Improving...</span>
+                      ) : (
+                        <>
+                          <img src="pen-loading.png" alt="Improve" style={{ verticalAlign: 'middle', marginRight: '5px' }} />
+                          Improve Prompt
+                        </>
+                      )}
                     </span>
                   </div>
                 </>
@@ -311,13 +398,15 @@ const AgentLauncher = () => {
                       {filteredSources.map((source, index) => (
                         <span
                           key={index}
+                          onClick={() => handleSourceClick(source)}
                           style={{
                             backgroundColor: '#1a1a1a',
                             padding: '8px 16px',
                             borderRadius: '20px',
                             color: 'white',
                             fontSize: '14px',
-                            cursor: 'pointer'
+                            cursor: 'pointer',
+                            border: selectedSources.includes(source) ? '1px solid white' : '1px solid transparent'
                           }}
                         >
                           {source}
@@ -339,20 +428,25 @@ const AgentLauncher = () => {
                       display: 'flex',
                       gap: '16px'
                     }}>
-                      <div style={{
-                        flex: 1,
-                        backgroundColor: '#1a1a1a',
-                        padding: '16px',
-                        borderRadius: '12px',
-                        cursor: 'pointer'
-                      }}>
+                      <div 
+                        onClick={() => handleActivitySelect('post')}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#1a1a1a',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          border: selectedActivities.includes('post') ? '1px solid white' : '1px solid transparent'
+                        }}
+                      >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span>Post on X</span>
                           <div style={{
                             width: '20px',
                             height: '20px',
                             borderRadius: '50%',
-                            border: '2px solid white'
+                            border: '2px solid white',
+                            backgroundColor: selectedActivities.includes('post') ? 'white' : 'transparent'
                           }} />
                         </div>
                         <img 
@@ -365,20 +459,25 @@ const AgentLauncher = () => {
                           }}
                         />
                       </div>
-                      <div style={{
-                        flex: 1,
-                        backgroundColor: '#1a1a1a',
-                        padding: '16px',
-                        borderRadius: '12px',
-                        cursor: 'pointer'
-                      }}>
+                      <div 
+                        onClick={() => handleActivitySelect('trade')}
+                        style={{
+                          flex: 1,
+                          backgroundColor: '#1a1a1a',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          cursor: 'pointer',
+                          border: selectedActivities.includes('trade') ? '1px solid white' : '1px solid transparent'
+                        }}
+                      >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <span>Make Trades</span>
                           <div style={{
                             width: '20px',
                             height: '20px',
                             borderRadius: '50%',
-                            border: '2px solid white'
+                            border: '2px solid white',
+                            backgroundColor: selectedActivities.includes('trade') ? 'white' : 'transparent'
                           }} />
                         </div>
                         <img 
@@ -430,6 +529,122 @@ const AgentLauncher = () => {
                     </button>
                   </div>
                 </>
+              ) : slides[currentStep].hasReview ? (
+                <>
+                  <div style={{ width: '90%' }}>
+                    <div style={{ 
+                      backgroundColor: '#111',
+                      borderRadius: '16px',
+                      padding: '24px',
+                      marginBottom: '24px'
+                    }}>
+                      <div style={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        gap: '12px',
+                        marginBottom: '24px' 
+                      }}>
+                        {agentImage ? (
+                          <img 
+                            src={URL.createObjectURL(agentImage)} 
+                            alt="Agent profile" 
+                            style={{
+                              width: '40px',
+                              height: '40px',
+                              borderRadius: '50%',
+                              objectFit: 'cover'
+                            }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '40px',
+                            height: '40px',
+                            borderRadius: '50%',
+                            backgroundColor: '#1a1a1a'
+                          }} />
+                        )}
+                        <h3 style={{ margin: 0 }}>{agentName}</h3>
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ color: '#666', marginBottom: '8px' }}>Description:</p>
+                        <p style={{ margin: 0 }}>{agentDescription}</p>
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ color: '#666', marginBottom: '8px' }}>Prompt:</p>
+                        <p style={{ margin: 0 }}>{/* Add prompt state variable and display here */}</p>
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ color: '#666', marginBottom: '8px' }}>Sources:</p>
+                        <p style={{ margin: 0 }}>{selectedSources.join(', ')}</p>
+                      </div>
+
+                      <div>
+                        <p style={{ color: '#666', marginBottom: '8px' }}>Activity:</p>
+                        <p style={{ margin: 0 }}>{selectedActivities.map(activity => 
+                          activity === 'trade' ? 'Making trades' : 'Posting on X'
+                        ).join(', ')}</p>
+                      </div>
+                    </div>
+
+                    <button 
+                      className="next-button"
+                      onClick={handleNext}
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'white',
+                        color: 'black',
+                        marginBottom: '12px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '500'
+                      }}
+                    >
+                      Create {agentName || 'Agent'}
+                    </button>
+
+                    <button 
+                      onClick={handleBack}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        color: 'white',
+                        cursor: 'pointer',
+                        padding: '12px',
+                        borderRadius: '8px'
+                      }}
+                    >
+                      Change Info
+                    </button>
+                  </div>
+                </>
+              ) : slides[currentStep].hasSuccess ? (
+                <>
+                  <div style={{ width: '90%', textAlign: 'center' }}>
+                    <button 
+                      className="next-button"
+                      onClick={() => navigate('/chat/alphachad')}
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'white',
+                        color: 'black',
+                        marginTop: '20px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '500'
+                      }}
+                    >
+                     Talk to {agentName || 'your agent'}
+                    </button>
+                  </div>
+                </>
               ) : (
                 <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
               )}
@@ -439,7 +654,7 @@ const AgentLauncher = () => {
                 disabled={currentStep === slides.length - 1}
                 style={{ 
                   marginTop: '1rem',
-                  display: (currentStep === slides.length - 1 || currentStep === 5) ? 'none' : 'block' 
+                  display: (currentStep === slides.length - 1 || currentStep === 5 || currentStep === 2) ? 'none' : 'block' 
                 }}
               >
                 {currentStep === 0 ? "Let's get started" : 'Continue'}

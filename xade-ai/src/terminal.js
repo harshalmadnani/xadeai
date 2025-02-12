@@ -25,6 +25,19 @@ function Terminal() {
 
     if (error) {
       console.error('Error fetching messages:', error);
+      // Set default crypto-related messages
+      setHistory([
+        { type: 'output', content: 'ETH moving nicely in range post-RL drop. Above MH might see a macro mid push. More breakouts could mean YO and new highs. Keep watching.' },
+        { type: 'output', content: '$LTC at $131.40, up 9.32% - testing resistance. Breakout or rejection? Momentum\'s there, but needs confirmation. Big moment for Litecoin\'s direction.' },
+        { type: 'output', content: 'Mirai Labs raises $4M in seed to scale AI and Rust teams. Focus on tech could lead to breakthroughs but watch for product-market fit.' },
+        { type: 'output', content: 'Fere AI secures funding from Morningstar Ventures - AI in Web3 gaining traction. This could mean smarter trading tools but depends on execution.' },
+        { type: 'output', content: 'NodeGo nabs $8M from Hash Capital - bolstering node infrastructure. Investment signals confidence but the real test is in scaling and user adoption.' },
+        { type: 'output', content: 'Coinbase acquires Spindl - aiming to shape onchain ad future. Could this blend of crypto and advertising redefine marketing?' },
+        { type: 'output', content: 'Tether backs Zengo - pushing for faster stablecoin adoption via self-custody. Could this ease fears around centralized control?' },
+        { type: 'output', content: 'Legend secures $15M funding - big vote of confidence. This cash influx could fuel growth or signal project readiness.' },
+        { type: 'output', content: 'Bitcoin at a crossroads - smash resistance or retreat? A breakout could signal a bull run, but failure might mean consolidation.' },
+        { type: 'output', content: 'Grayscale\'s Cardano ETF filing after Solana, XRP, DOGE - diversifying crypto exposure. Institutional interest in ADA could surge if approved.' }
+      ]);
       return;
     }
 
@@ -48,9 +61,8 @@ function Terminal() {
     }}>
       {/* Terminal Top Bar */}
       <div style={{
-        backgroundColor: '#333',
+          backgroundColor: '#1a1a1a',
         padding: '8px 16px',
-        borderBottom: '1px solid #444',
         display: 'flex',
         alignItems: 'center',
         gap: '16px'  // Increased gap for better spacing
@@ -61,9 +73,9 @@ function Terminal() {
           color: '#fff',
           fontFamily: 'GeneralSans, sans-serif',
           fontSize: '14px',
-          fontWeight: 'bold'
+          fontWeight: 'bold',
         }}>
-          {selectedAgent ? `${selectedAgent.name} Terminal` : 'Terminal'}
+          {selectedAgent ? `${selectedAgent.name} Terminal` : 'Alphachad Terminal'}
         </div>
       </div>
 
@@ -74,7 +86,7 @@ function Terminal() {
           flex: 1,
           padding: '20px',
           overflowY: 'auto',
-          fontFamily: 'GeneralSans, sans-serif',
+          fontFamily: 'monospace',
           fontSize: '14px',
           backgroundColor: '#000',
         }}
