@@ -20,7 +20,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import { supabase } from './lib/supabase';
 
 function App() {
-  const { ready, authenticated, login } = usePrivy();
+  const { ready, authenticated, login, user } = usePrivy();
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedTab, setSelectedTab] = useState(0);
@@ -29,6 +29,8 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [agents, setAgents] = useState([]);
+  const [hasNFT, setHasNFT] = useState(false);
+  const [checkingNFT, setCheckingNFT] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
@@ -56,6 +58,59 @@ function App() {
     
     fetchAgents();
   }, []);
+
+  useEffect(() => {
+    if (authenticated && user) {
+      const walletAddress = user.wallet?.address;
+      console.log('User wallet address:', walletAddress);
+      
+      const storeWalletAddress = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('users')
+            .upsert({ 
+              wallet_address: walletAddress,
+            }, { onConflict: 'wallet_address' });
+            
+          if (error) throw error;
+          console.log('Wallet address stored successfully');
+        } catch (error) {
+          console.error('Error storing wallet address:', error);
+        }
+      };
+
+      if (walletAddress) {
+        storeWalletAddress();
+      }
+    }
+  }, [authenticated, user]);
+
+  // Add NFT check when user is authenticated
+  useEffect(() => {
+    const checkNFTOwnership = async (walletAddress) => {
+      try {
+        const response = await fetch(`https://production-api.mobula.io/api/1/wallet/nfts?wallet=${walletAddress}`, {
+          method: 'GET'
+        });
+        const data = await response.json();
+        
+        // Check if the wallet owns an NFT from the specific contract
+        const hasRequiredNFT = data.data?.some(nft => 
+          nft.contract_address.toLowerCase() === '0x01D593b02ed918acF3e293Ae18aE84b1fE3fe8Cf'.toLowerCase()
+        );
+        
+        setHasNFT(hasRequiredNFT);
+        setCheckingNFT(false);
+      } catch (error) {
+        console.error('Error checking NFT ownership:', error);
+        setCheckingNFT(false);
+      }
+    };
+
+    if (authenticated && user?.wallet?.address) {
+      checkNFTOwnership(user.wallet.address);
+    }
+  }, [authenticated, user]);
 
   const getTabName = (index) => {
     const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board'];
@@ -187,6 +242,89 @@ function App() {
   const handleAgentChange = (agent) => {
     setSelectedAgent(agent);
   };
+
+  // If authenticated but no NFT, show NFT required page
+  if (authenticated && !checkingNFT && !hasNFT) {
+    return (
+      <div className="App" style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: `url('/111.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        color: 'white',
+        padding: '20px',
+        textAlign: 'center',
+      }}>
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          maxWidth: '800px',
+          gap: '24px',
+          padding: '40px',
+          borderRadius: '20px',
+
+        }}>
+          <h1 style={{
+            fontSize: '48px',
+            fontWeight: '500',
+            marginBottom: '16px',
+          }}>
+            We are currently only open to<br />
+            Early Access NFT Holders
+          </h1>
+          <div style={{
+            display: 'flex',
+            gap: '16px'
+          }}>
+            <button style={{
+              padding: '12px 24px',
+              backgroundColor: 'white',
+              color: 'black',
+              border: 'none',
+              borderRadius: '50px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '500',
+            }}>
+              Mint the NFT
+            </button>
+            <button style={{
+              padding: '12px 24px',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              color: 'white',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              borderRadius: '50px',
+              cursor: 'pointer',
+              fontSize: '16px',
+              fontWeight: '500',
+            }}>
+              Join the community
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // If still checking NFT status, show loading
+  if (authenticated && checkingNFT) {
+    return (
+      <div className="App" style={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        height: '100vh',
+        background: '#000000',
+        color: 'white',
+      }}>
+        <div>Checking NFT ownership...</div>
+      </div>
+    );
+  }
 
   // If Privy is not ready or user is not authenticated, show login page
   if (!ready || !authenticated) {
