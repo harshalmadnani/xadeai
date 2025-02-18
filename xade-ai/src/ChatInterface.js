@@ -31,7 +31,7 @@ const openai = new OpenAI({
   dangerouslyAllowBrowser: true
 });
 
-// Add Groq import at the top
+// Remove Groq and OpenAI imports and instances
 const Groq = require('groq-sdk');
 const groq = new Groq({
   apiKey: process.env.REACT_APP_GROQ_API_KEY,
@@ -337,27 +337,42 @@ function ChatInterface({ selectedAgent }) {
   const [errorSnackbar, setErrorSnackbar] = useState({ open: false, message: '' });
   const messageListRef = useRef(null);
 
-  const callOpenAIAPI = async (userInput) => {
+  // Replace the callOpenAIAPI function with callPerplexityAPI
+  const callPerplexityAPI = async (userInput) => {
     try {
-      const response = await groq.chat.completions.create({
-        model: "mixtral-8x7b-32768",  // Groq's Mixtral model
-        messages: [
-          { 
-            role: "system",
-            content: "You are Alphachad, a helpful assistant focused on cryptocurrency and blockchain technology."
-          },
-          { role: "user", content: userInput }
-        ],
-        temperature: 0.7
-      });
+      const options = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.REACT_APP_PERPLEXITY_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: "sonar",
+          messages: [
+            {
+              role: "system",
+              content: "You are Alphachad , a degenerate and fun assistant focused on crypto that provides its thoughts on different data requested by the user along with the data in a degen manner"
+            },
+            { role: "user", content: userInput }
+          ]
+        })
+      };
 
-      return response.choices[0].message.content;
+      const response = await fetch('https://api.perplexity.ai/chat/completions', options);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to get AI response');
+      }
+
+      return data.choices[0].message.content;
     } catch (error) {
-      console.error('Error calling Groq API:', error);
+      console.error('Error calling Perplexity API:', error);
       throw new Error('Failed to get AI response');
     }
   };
 
+  // Update the handleSubmit function to use the new API call
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -370,7 +385,7 @@ function ChatInterface({ selectedAgent }) {
     setInput('');
 
     try {
-      const aiResponse = await callOpenAIAPI(input);
+      const aiResponse = await callPerplexityAPI(input);
       setMessages(prev => [...prev, { role: 'assistant', content: aiResponse }]);
     } catch (error) {
       setError(error.message);
@@ -384,45 +399,63 @@ function ChatInterface({ selectedAgent }) {
     setErrorSnackbar({ open: false, message: '' });
   };
 
-  const renderMessage = (message, index) => (
-    <div key={index} style={{
-      ...styles.message,
-      maxWidth: '95%',
-      marginLeft: message.role === 'user' ? 'auto' : '0',
-      marginRight: '0'
-    }}>
-      {message.role === 'assistant' && (
-        <img 
-          src={selectedAgent?.image || '/1.png'}
-          alt={selectedAgent?.agent_name || "Xade AI"}
-          style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '50%',
-            marginRight: '12px'
-          }}
-        />
-      )}
-      <div style={{
-        ...styles.bubble,
-        ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble),
-        fontSize: '18px',
-        textAlign: 'left',
-        maxWidth: '100%',
-        padding: '14px 18px',
-        lineHeight: '1.6',
+  const renderMessage = (message, index) => {
+    // Format the message content to handle markdown-style elements
+    const formatContent = (content) => {
+      return content
+        // Handle headers
+        .replace(/###\s*(.*?)(?:\n|$)/g, '<h3 style="margin: 16px 0; font-size: 1.2em;">$1</h3>')
+        // Handle stars for emphasis
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        // Handle hashtags
+        .replace(/(#\w+)/g, '<span style="color: #00aaff">$1</span>')
+        // Handle newlines
+        .replace(/\n/g, '<br>')
+        // Handle bullet points
+        .replace(/•(.*)/g, '<div style="margin-left: 20px">•$1</div>');
+    };
+
+    return (
+      <div key={index} style={{
+        ...styles.message,
+        maxWidth: '95%',
+        marginLeft: message.role === 'user' ? 'auto' : '0',
+        marginRight: '0'
       }}>
-        <div 
-          dangerouslySetInnerHTML={{ __html: message.content }}
-          style={{
-            lineHeight: '1.6',
-            fontSize: '18px',
-            textAlign: 'left'
-          }}
-        />
+        {message.role === 'assistant' && (
+          <img 
+            src={selectedAgent?.image || '/1.png'}
+            alt={selectedAgent?.agent_name || "Xade AI"}
+            style={{
+              width: '32px',
+              height: '32px',
+              borderRadius: '50%',
+              marginRight: '12px'
+            }}
+          />
+        )}
+        <div style={{
+          ...styles.bubble,
+          ...(message.role === 'user' ? styles.userBubble : styles.assistantBubble),
+          fontSize: '18px',
+          textAlign: 'left',
+          maxWidth: '100%',
+          padding: '14px 18px',
+          lineHeight: '1.6',
+        }}>
+          <div 
+            dangerouslySetInnerHTML={{ __html: message.role === 'assistant' ? formatContent(message.content) : message.content }}
+            style={{
+              lineHeight: '1.6',
+              fontSize: '18px',
+              textAlign: 'left'
+            }}
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
     <div style={{

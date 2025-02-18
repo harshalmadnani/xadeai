@@ -12,10 +12,59 @@ function Terminal() {
   const [selectedAgent, setSelectedAgent] = useState(null);
   const terminalRef = useRef(null);
 
-  // Add useEffect to fetch messages when component mounts
+  // Add useEffect for Perplexity API calls
   useEffect(() => {
     fetchMessages();
+    // Set up interval for Perplexity API calls
+    const interval = setInterval(fetchCryptoNews, 30000);
+    return () => clearInterval(interval);
   }, []);
+
+  // Function to fetch crypto news from Perplexity
+  const fetchCryptoNews = async () => {
+    try {
+      const options = {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.REACT_APP_PERPLEXITY_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: "sonar",
+          messages: [
+            {
+              role: "system",
+              content: "You are Alphachad, a degenerate and fun assistant focused on crypto. Give one brief piece of recent crypto news or market update in a degen manner."
+            },
+            { 
+              role: "user", 
+              content: "Give me one piece of recent crypto news or market update." 
+            }
+          ]
+        })
+      };
+
+      const response = await fetch('https://api.perplexity.ai/chat/completions', options);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error?.message || 'Failed to get AI response');
+      }
+
+      // Add new message to history
+      setHistory(prev => [...prev, {
+        type: 'output',
+        content: data.choices[0].message.content
+      }]);
+
+      // Scroll to bottom
+      if (terminalRef.current) {
+        terminalRef.current.scrollTop = terminalRef.current.scrollHeight;
+      }
+    } catch (error) {
+      console.error('Error fetching crypto news:', error);
+    }
+  };
 
   // Function to fetch messages from Supabase
   const fetchMessages = async () => {
@@ -30,13 +79,7 @@ function Terminal() {
         { type: 'output', content: 'ETH moving nicely in range post-RL drop. Above MH might see a macro mid push. More breakouts could mean YO and new highs. Keep watching.' },
         { type: 'output', content: '$LTC at $131.40, up 9.32% - testing resistance. Breakout or rejection? Momentum\'s there, but needs confirmation. Big moment for Litecoin\'s direction.' },
         { type: 'output', content: 'Mirai Labs raises $4M in seed to scale AI and Rust teams. Focus on tech could lead to breakthroughs but watch for product-market fit.' },
-        { type: 'output', content: 'Fere AI secures funding from Morningstar Ventures - AI in Web3 gaining traction. This could mean smarter trading tools but depends on execution.' },
-        { type: 'output', content: 'NodeGo nabs $8M from Hash Capital - bolstering node infrastructure. Investment signals confidence but the real test is in scaling and user adoption.' },
-        { type: 'output', content: 'Coinbase acquires Spindl - aiming to shape onchain ad future. Could this blend of crypto and advertising redefine marketing?' },
-        { type: 'output', content: 'Tether backs Zengo - pushing for faster stablecoin adoption via self-custody. Could this ease fears around centralized control?' },
-        { type: 'output', content: 'Legend secures $15M funding - big vote of confidence. This cash influx could fuel growth or signal project readiness.' },
-        { type: 'output', content: 'Bitcoin at a crossroads - smash resistance or retreat? A breakout could signal a bull run, but failure might mean consolidation.' },
-        { type: 'output', content: 'Grayscale\'s Cardano ETF filing after Solana, XRP, DOGE - diversifying crypto exposure. Institutional interest in ADA could surge if approved.' }
+
       ]);
       return;
     }
@@ -59,27 +102,7 @@ function Terminal() {
       backgroundColor: '#000',
       color: '#fff',
     }}>
-      {/* Terminal Top Bar */}
-      <div style={{
-          backgroundColor: '#1a1a1a',
-        padding: '8px 16px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '16px'  // Increased gap for better spacing
-      }}>
-        {/* Terminal Controls */}
-      
-        <div style={{ 
-          color: '#fff',
-          fontFamily: 'GeneralSans, sans-serif',
-          fontSize: '14px',
-          fontWeight: 'bold',
-        }}>
-          {selectedAgent ? `${selectedAgent.name} Terminal` : 'Alphachad Terminal'}
-        </div>
-      </div>
-
-      {/* Terminal Output */}
+      {/* Terminal Output with modified styling */}
       <div 
         ref={terminalRef}
         style={{
@@ -89,6 +112,7 @@ function Terminal() {
           fontFamily: 'monospace',
           fontSize: '14px',
           backgroundColor: '#000',
+          lineHeight: '1.8',
         }}
       >
         {history.map((entry, index) => (
@@ -96,10 +120,10 @@ function Terminal() {
             key={index}
             style={{
               color: entry.type === 'input' ? '#64ff64' : '#fff',
-              marginBottom: '8px',
+              marginBottom: '16px',
             }}
           >
-            {entry.type === 'input' ? '> ' : ''}
+            <span style={{ color: '#64ff64' }}>{entry.type === 'input' ? '> ' : 'Alphachad: '}</span>
             {entry.content}
           </div>
         ))}

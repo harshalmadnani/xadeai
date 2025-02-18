@@ -5,6 +5,17 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import './AgentLauncher.css';
 import { useNavigate } from 'react-router-dom';
 
+const loadingAnimation = {
+  display: 'inline-block',
+  width: '20px',
+  height: '20px',
+  marginLeft: '10px',
+  border: '3px solid rgba(0, 0, 0, 0.3)',
+  borderRadius: '50%',
+  borderTopColor: '#000',
+  animation: 'spin 1s ease-in-out infinite',
+  verticalAlign: 'middle'
+};
 
 const AgentLauncher = () => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -14,17 +25,14 @@ const AgentLauncher = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSources, setSelectedSources] = useState([]);
   const [selectedActivities, setSelectedActivities] = useState([]);
-  const [prompt, setPrompt] = useState('');
-  const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
-  const Groq = require('groq-sdk');
-  const groq = new Groq({
-    apiKey: process.env.REACT_APP_GROQ_API_KEY,
-    dangerouslyAllowBrowser: true 
-  });
-  
+  const [isCreating, setIsCreating] = useState(false);
+  const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
+  const [prompt, setPrompt] = useState('');
+  const [imagesPreloaded, setImagesPreloaded] = useState(false);
+
   const slides = [
     { image: '/picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
     { 
@@ -135,31 +143,87 @@ const AgentLauncher = () => {
     );
   };
 
-  const improvePrompt = async () => {
+  const handleCreateAgent = async () => {
+    setIsCreating(true);
+    try {
+      // Simulate a delay for the creation process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Handle the creation logic
+      console.log('Agent created successfully');
+      handleNext();
+    } catch (error) {
+      console.error('Error creating agent:', error);
+    } finally {
+      setIsCreating(false);
+    }
+  };
+
+  const handleImprovePrompt = async () => {
+    if (!prompt.trim()) return;
+    
     setIsImprovingPrompt(true);
     try {
-      const response = await groq.chat.completions.create({
-        model: "mixtral-8x7b-32768",
-        messages: [
-          {
-            role: "system",
-            content: "You are an expert at improving AI agent prompts. Make the provided prompt more specific, detailed, and effective while maintaining its core intent."
-          },
-          {
-            role: "user",
-            content: `Please improve this AI agent prompt: "${prompt}"`
-          }
-        ],
-        temperature: 0.7
+      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.REACT_APP_GROQ_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model: 'mixtral-8x7b-32768',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert at improving AI agent prompts. Make the prompt more specific, detailed, and effective while maintaining its original intent.'
+            },
+            {
+              role: 'user',
+              content: `Please improve this prompt: ${prompt}`
+            }
+          ],
+          temperature: 0.7,
+          max_tokens: 1024
+        })
       });
-      setPrompt(response.choices[0].message.content);
+
+      if (!response.ok) {
+        throw new Error('Failed to improve prompt');
+      }
+
+      const data = await response.json();
+      const improvedPrompt = data.choices[0].message.content;
+      setPrompt(improvedPrompt);
     } catch (error) {
       console.error('Error improving prompt:', error);
-      alert('Failed to improve prompt');
+      // Optionally show an error message to the user
     } finally {
       setIsImprovingPrompt(false);
     }
   };
+
+  React.useEffect(() => {
+    const preloadImages = async () => {
+      const imagePromises = slides.map(slide => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.src = slide.image;
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+      });
+
+      try {
+        await Promise.all(imagePromises);
+        setImagesPreloaded(true);
+      } catch (error) {
+        console.error('Error preloading images:', error);
+        // Still set as true to not block rendering
+        setImagesPreloaded(true);
+      }
+    };
+
+    preloadImages();
+  }, []);
 
   return (
     <div className="agent-launcher-container">
@@ -222,10 +286,12 @@ const AgentLauncher = () => {
                   width: '90%',
                   height: '50%',
                   objectFit: "contain",
-                  borderRadius: '12px'
+                  borderRadius: '12px',
+                  opacity: imagesPreloaded ? 1 : 0,
+                  transition: 'opacity 0.3s ease-in',
+                  loading: "eager",
                 }}
               />
-   
             </div>
             
             <div className="content-container">
@@ -300,20 +366,19 @@ const AgentLauncher = () => {
                     </button>
                   </div>
                   {agentImage && (
-                    <p style={{ marginTop: '10px', color: 'green' }}>
-                      Image uploaded: {agentImage.name}
-                    </p>
+                    <>
+                      <p style={{ marginTop: '10px', color: 'green' }}>
+                        Image uploaded: {agentImage.name}
+                      </p>
+                      <button 
+                        className="next-button"
+                        onClick={handleNext}
+                        style={{ marginTop: '20px' }}
+                      >
+                        Continue
+                      </button>
+                    </>
                   )}
-                  <button 
-                    className="next-button"
-                    onClick={handleNext}
-                    style={{ 
-                      marginTop: '20px',
-                      width: '100%'
-                    }}
-                  >
-                    Continue
-                  </button>
                 </>
               ) : slides[currentStep].hasPrompt ? (
                 <>
@@ -339,30 +404,32 @@ const AgentLauncher = () => {
                     display: 'flex', 
                     alignItems: 'center', 
                     gap: '8px',
-                    color: '#666',
-                    fontSize: '14px',
                     marginBottom: '20px'
                   }}>
-                    <span 
-                      onClick={improvePrompt}
+                    <button 
+                      onClick={handleImprovePrompt}
+                      disabled={!prompt.trim() || isImprovingPrompt}
                       style={{ 
-                        cursor: 'pointer',
-                        backgroundColor: '#1a1a1a',
-                        padding: '8px 12px',
+                        cursor: prompt.trim() && !isImprovingPrompt ? 'pointer' : 'default',
+                        backgroundColor: prompt.trim() && !isImprovingPrompt ? 'white' : '#1a1a1a',
+                        padding: '8px 16px',
                         borderRadius: '20px',
                         display: 'flex',
-                        alignItems: 'center'
+                        alignItems: 'center',
+                        gap: '8px',
+                        border: 'none',
+                        color: prompt.trim() && !isImprovingPrompt ? '#000' : '#666',
+                        fontSize: '14px',
+                        transition: 'all 0.2s ease',
                       }}
                     >
-                      {isImprovingPrompt ? (
-                        <span>Improving...</span>
-                      ) : (
-                        <>
-                          <img src="pen-loading.png" alt="Improve" style={{ verticalAlign: 'middle', marginRight: '5px' }} />
-                          Improve Prompt
-                        </>
-                      )}
-                    </span>
+                      <img src="/pen-loading.png" alt="Improve" style={{ 
+                        width: '16px', 
+                        height: '16px',
+                        filter: prompt.trim() && !isImprovingPrompt ? 'invert(1)' : 'none'
+                      }} />
+                      {isImprovingPrompt ? 'Improving...' : 'Improve Prompt'}
+                    </button>
                   </div>
                 </>
               ) : slides[currentStep].hasDataSources ? (
@@ -491,17 +558,6 @@ const AgentLauncher = () => {
                         />
                       </div>
                     </div>
-                    <button 
-                      className="next-button"
-                      onClick={handleNext}
-                      style={{
-                        width: '100%',
-                        backgroundColor: 'white',
-                        color: 'black'
-                      }}
-                    >
-                      Review and Bring {agentName || 'your agent'} to Life
-                    </button>
                   </div>
                 </>
               ) : slides[currentStep].hasXConfig ? (
@@ -591,20 +647,32 @@ const AgentLauncher = () => {
 
                     <button 
                       className="next-button"
-                      onClick={handleNext}
+                      onClick={handleCreateAgent}
+                      disabled={isCreating}
                       style={{
                         width: '100%',
-                        backgroundColor: 'white',
+                        backgroundColor: isCreating ? '#666' : 'white',
                         color: 'black',
                         marginBottom: '12px',
                         padding: '12px',
                         borderRadius: '8px',
                         border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '500'
+                        cursor: isCreating ? 'default' : 'pointer',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '10px'
                       }}
                     >
-                      Create {agentName || 'Agent'}
+                      {isCreating ? (
+                        <>
+                          Creating your agent
+                          <div style={loadingAnimation} />
+                        </>
+                      ) : (
+                        `Create ${agentName || 'Agent'}`
+                      )}
                     </button>
 
                     <button 
@@ -654,7 +722,10 @@ const AgentLauncher = () => {
                 disabled={currentStep === slides.length - 1}
                 style={{ 
                   marginTop: '1rem',
-                  display: (currentStep === slides.length - 1 || currentStep === 5 || currentStep === 2) ? 'none' : 'block' 
+                  display: (currentStep === slides.length - 1 || 
+                          currentStep === 5 || 
+                          currentStep === 2 ||
+                          slides[currentStep].hasReview) ? 'none' : 'block' 
                 }}
               >
                 {currentStep === 0 ? "Let's get started" : 'Continue'}

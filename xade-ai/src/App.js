@@ -188,38 +188,131 @@ function App() {
     setSelectedAgent(agent);
   };
 
-  // If Privy is not ready or user is not authenticated, show login button
+  // If Privy is not ready or user is not authenticated, show login page
   if (!ready || !authenticated) {
     return (
       <div className="App" style={{
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh',
-        background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+        height: '90vh',
+        background: '#000000',
+        color: 'white',
+        padding: '5% 20px',
+        fontFamily: 'GeneralSans-Medium, "General Sans", sans-serif', 
       }}>
-        <button 
-          onClick={login}
-          disabled={!ready}
-          style={{
-            padding: '12px 24px',
-            fontSize: '16px',
-            backgroundColor: 'rgba(255, 255, 255, 0.1)',
-            border: '1px solid rgba(255, 255, 255, 0.2)',
-            borderRadius: '8px',
-            color: 'white',
-            cursor: !ready ? 'not-allowed' : 'pointer',
-            transition: 'all 0.2s ease',
-          }}
-          onMouseOver={(e) => {
-            if (ready) e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.2)'
-          }}
-          onMouseOut={(e) => {
-            if (ready) e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'
-          }}
-        >
-          {!ready ? 'Loading...' : 'Log in'}
-        </button>
+        <div style={{
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          width: '100%',
+          maxWidth: '1200px',
+          gap: isMobile ? '24px' : '40px',
+        }}>
+          {/* Left side - Image */}
+          <div style={{
+            flex: '1',
+            position: 'relative',
+            textAlign: 'left',
+            width: '100%',
+          }}>
+            <img 
+              src="/picture.png" 
+              alt="AI Agent Launcher"
+              style={{
+                width: '100%',
+                height: isMobile ? '50%' : '80%',
+                borderRadius: '20px',
+                objectFit: 'cover',
+              }}
+            />
+          </div>
+
+          {/* Right side - Updated button loading state */}
+          <div style={{
+            flex: '1',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: isMobile ? '16px' : '24px',
+            textAlign: 'left',
+            width: '100%',
+          }}>
+            <h1 style={{
+              fontSize: isMobile ? '32px' : '48px',
+              fontWeight: 'bold',
+              marginBottom: isMobile ? '8px' : '16px',
+              lineHeight: '1.2',
+              fontFamily: 'GeneralSans-Variable, "General Sans", sans-serif',
+              textAlign: 'left',
+            }}>
+              The easiest way to discover, launch and trade AI agents
+            </h1>
+            <p style={{
+              fontSize: isMobile ? '16px' : '18px',
+              color: 'rgba(255, 255, 255, 0.7)',
+              marginBottom: isMobile ? '16px' : '32px',
+              fontFamily: 'GeneralSans-Variable, "General Sans", sans-serif',
+              textAlign: 'left',
+            }}>
+              Launch and scale your AI-Agents with unprecedented ease and speed
+            </p>
+            <button 
+              onClick={login}
+              disabled={!ready}
+              style={{
+                padding: isMobile ? '12px 24px' : '16px 32px',
+                fontSize: isMobile ? '16px' : '18px',
+                fontWeight: '600',
+                backgroundColor: !ready ? 'rgba(255, 255, 255, 0.5)' : 'white',
+                color: !ready ? 'rgba(0, 0, 0, 0.5)' : 'black',
+                border: 'none',
+                borderRadius: '50px',
+                cursor: !ready ? 'not-allowed' : 'pointer',
+                transition: 'all 0.2s ease',
+                width: 'fit-content',
+                fontFamily: 'GeneralSans-Variable, "General Sans", sans-serif',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+              onMouseOver={(e) => {
+                if (ready) e.target.style.transform = 'scale(1.05)'
+              }}
+              onMouseOut={(e) => {
+                if (ready) e.target.style.transform = 'scale(1)'
+              }}
+            >
+              {!ready ? (
+                <>
+                  <div className="loading-dots">
+                    <style>
+                      {`
+                        .loading-dots {
+                          display: flex;
+                          gap: 4px;
+                          align-items: center;
+                        }
+                        .loading-dots::after {
+                          content: '...';
+                          animation: dots 1.5s steps(4, end) infinite;
+                          letter-spacing: 2px;
+                        }
+                        @keyframes dots {
+                          0%, 20% { content: '.'; }
+                          40% { content: '..'; }
+                          60% { content: '...'; }
+                          80%, 100% { content: ''; }
+                        }
+                      `}
+                    </style>
+                    Loading
+                  </div>
+                </>
+              ) : 'Get Started'}
+            </button>
+          </div>
+        </div>
       </div>
     );
   }

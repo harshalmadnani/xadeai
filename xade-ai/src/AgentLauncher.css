@@ -464,3 +464,9 @@ body {
     justify-content: center;
   }
 }
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

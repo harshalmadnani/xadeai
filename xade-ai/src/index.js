@@ -20,7 +20,7 @@ root.render(
         appearance: {
           theme: 'dark',
           accentColor: '#fff',
-          logo: './XADE.png',
+          logo: 'https://res.cloudinary.com/dcrfpsiiq/image/upload/v1739879774/finurkyzqfafkgfodgwh.png',
         },
         // Create embedded wallets for users who don't have a wallet
         embeddedWallets: {
