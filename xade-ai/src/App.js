@@ -219,7 +219,7 @@ function App() {
         justifyContent: 'center',
         alignItems: 'center',
         height: '100vh',
-        background: `url('/111.png')`,
+        background: `url(https://res.cloudinary.com/dcrfpsiiq/image/upload/v1709897243/ie5mtdv4gacvnhdyguzm.png)`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         color: 'white',
@@ -248,16 +248,18 @@ function App() {
             display: 'flex',
             gap: '16px'
           }}>
-            <button style={{
-              padding: '12px 24px',
-              backgroundColor: 'white',
-              color: 'black',
-              border: 'none',
-              borderRadius: '50px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: '500',
-            }}>
+            <button 
+              onClick={() => window.open('https://www.crossmint.com/collections/xade-early-access-nfts/drop', '_blank')}
+              style={{
+                padding: '12px 24px',
+                backgroundColor: 'white',
+                color: 'black',
+                border: 'none',
+                borderRadius: '50px',
+                cursor: 'pointer',
+                fontSize: '16px',
+                fontWeight: '500',
+              }}>
               Mint the NFT
             </button>
             <button style={{
@@ -269,7 +271,9 @@ function App() {
               cursor: 'pointer',
               fontSize: '16px',
               fontWeight: '500',
-            }}>
+            }}
+            onClick={() => window.open('https://t.me/xadeofficial', '_blank')}
+            >
               Join the community
             </button>
           </div>
@@ -324,7 +328,7 @@ function App() {
             width: '100%',
           }}>
             <img 
-              src="/picture.png" 
+              src="https://res.cloudinary.com/dcrfpsiiq/image/upload/v1739882221/svgucknbn67gqb1m7xfm.png" 
               alt="AI Agent Launcher"
               style={{
                 width: '100%',
