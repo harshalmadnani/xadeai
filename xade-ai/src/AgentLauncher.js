@@ -31,6 +31,15 @@ const AgentLauncher = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
   const [prompt, setPrompt] = useState('');
+  const [selectedCharacter, setSelectedCharacter] = useState('presets');
+  const [selectedPreset, setSelectedPreset] = useState('');
+  const [setupX, setSetupX] = useState(false);
+
+  const characterOptions = [
+    { value: 'presets', label: 'Presets' },
+    { value: 'username', label: 'X username' },
+    { value: 'prompt', label: 'From Prompt' }
+  ];
 
   const slides = [
     { image: '/picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
@@ -58,11 +67,36 @@ const AgentLauncher = () => {
       content: 'You can search for actions and sources',
       hasDataSources: true 
     },
+    {
+      image: '/picture16.png',
+      title: 'Choose the character for\nyour agent',
+      content: '',
+      hasCharacterSelect: true
+    },
     { 
       image: '/picture6.png', 
       title: `Would you like to\nconfigure X account\nfor ${agentName || 'your agent'} now?`, 
       content: '',
       hasXConfig: true 
+    },
+    {
+      image: '/picture12.png',
+      title: 'Label your agent\naccount as automated',
+      content: '',
+      hasXLabel: true,
+      previewImage: '/picture15.png'
+    },
+    {
+      image: '/picture13.png',
+      title: 'Download browser\nextension',
+      content: '',
+      hasXExtension: true
+    },
+    {
+      image: '/picture14.png',
+      title: 'Enter details',
+      content: '',
+      hasXDetails: true
     },
     { 
       image: '/picture7.png', 
@@ -101,7 +135,11 @@ const AgentLauncher = () => {
 
   const handleNext = () => {
     if (currentStep < slides.length - 1) {
-      setCurrentStep(currentStep + 1);
+      if (currentStep === 6 && !setupX) {
+        setCurrentStep(10);
+      } else {
+        setCurrentStep(currentStep + 1);
+      }
     }
   };
 
@@ -200,23 +238,6 @@ const AgentLauncher = () => {
     }
   };
 
-  // Add preloading function
-  const preloadImage = (src) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.src = src;
-      img.onload = resolve;
-      img.onerror = reject;
-    });
-  };
-
-  // Preload next image when current step changes
-  React.useEffect(() => {
-    if (currentStep < slides.length - 1) {
-      preloadImage(slides[currentStep + 1].image);
-    }
-  }, [currentStep]);
-
   return (
     <div className="agent-launcher-container">
       <div className="progress-bar-container">
@@ -281,7 +302,6 @@ const AgentLauncher = () => {
                   borderRadius: '12px',
                 }}
                 loading="eager"
-                decoding="async"
               />
             </div>
             
@@ -473,6 +493,116 @@ const AgentLauncher = () => {
                     </div>
                   </div>
                 </>
+              ) : slides[currentStep].hasCharacterSelect ? (
+                <div style={{ width: '90%' }}>
+                  <select
+                    value={selectedCharacter}
+                    onChange={(e) => setSelectedCharacter(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      height: '48px',
+                      fontSize: '14px',
+                      marginBottom: '20px',
+                      appearance: 'none',
+                      backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L7 7L13 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>')`,
+                      backgroundRepeat: 'no-repeat',
+                      backgroundPosition: 'right 12px center',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {characterOptions.map(option => (
+                      <option key={option.value} value={option.value}>{option.label}</option>
+                    ))}
+                  </select>
+
+                  {selectedCharacter === 'presets' && (
+                    <div style={{
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '20px'
+                    }}>
+                      {['Degen Analyst', 'Analyst', 'Degen'].map(preset => (
+                        <button
+                          key={preset}
+                          onClick={() => setSelectedPreset(preset)}
+                          style={{
+                            backgroundColor: selectedPreset === preset ? '#fff' : '#1a1a1a',
+                            padding: '8px 16px',
+                            borderRadius: '20px',
+                            color: selectedPreset === preset ? '#000' : '#fff',
+                            border: 'none',
+                            cursor: 'pointer',
+                            fontSize: '14px',
+                            transition: 'all 0.2s ease'
+                          }}
+                        >
+                          {preset}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {selectedCharacter === 'username' && (
+                    <input
+                      type="text"
+                      placeholder="@satoshi.xyz"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        height: '40px',
+                        fontSize: '14px',
+                        marginBottom: '20px'
+                      }}
+                    />
+                  )}
+
+                  {selectedCharacter === 'prompt' && (
+                    <input
+                      type="text"
+                      placeholder="Enter your character prompt"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        height: '40px',
+                        fontSize: '14px',
+                        marginBottom: '20px'
+                      }}
+                    />
+                  )}
+
+                  {(selectedPreset || selectedCharacter !== 'presets') && (
+                    <button 
+                      className="next-button"
+                      onClick={handleNext}
+                      style={{
+                        width: '100%',
+                        backgroundColor: 'white',
+                        color: 'black',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        marginTop: '20px'
+                      }}
+                    >
+                      Continue
+                    </button>
+                  )}
+                </div>
               ) : slides[currentStep].hasActivities ? (
                 <>
                   <p>{slides[currentStep].content}</p>
@@ -557,14 +687,20 @@ const AgentLauncher = () => {
                   <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
                     <button 
                       className="next-button"
-                      onClick={handleNext}
+                      onClick={() => {
+                        setSetupX(true);
+                        handleNext();
+                      }}
                       style={{ flex: 1 }}
                     >
                       Let's do this
                     </button>
                     <button 
                       className="next-button"
-                      onClick={handleNext}
+                      onClick={() => {
+                        setSetupX(false);
+                        handleNext();
+                      }}
                       style={{ 
                         flex: 1,
                         backgroundColor: 'transparent',
@@ -576,6 +712,155 @@ const AgentLauncher = () => {
                     </button>
                   </div>
                 </>
+              ) : slides[currentStep].hasXLabel ? (
+                <div style={{ width: '90%', textAlign: 'center' }}>
+                  <img 
+                    src={slides[currentStep].previewImage}
+                    alt="X Account Preview"
+                    style={{
+                      width: '100%',
+                      marginBottom: '20px',
+                      borderRadius: '8px'
+                    }}
+                  />
+                  <a 
+                    href="https://devcommunity.x.com/t/introducing-automated-account-labeling/166830"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <button 
+                      className="next-button"
+                      style={{
+                        width: '110%',
+                        backgroundColor: 'transparent',
+                        color: 'white',
+                        marginTop: '20px',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px solid white',
+                        cursor: 'pointer',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      Read guide
+                     
+                    </button>
+                  </a>
+                </div>
+              ) : slides[currentStep].hasXExtension ? (
+                <div style={{ width: '90%', textAlign: 'center' }}>
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '110%',
+                      backgroundColor: 'transparent',
+                      color: 'white',
+                      marginTop: '20px',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: '1px solid white',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    Download now
+                  </button>
+                </div>
+              ) : slides[currentStep].hasXDetails ? (
+                <div style={{ width: '90%' }}>
+                  <div style={{ marginBottom: '20px' }}>
+                    <p style={{ color: '#666', marginBottom: '8px' }}>Email address</p>
+                    <input
+                      type="email"
+                      placeholder="satoshi@xade.xyz"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        height: '40px',
+                        fontSize: '14px',
+                        marginBottom: '16px'
+                      }}
+                    />
+                    <p style={{ color: '#666', marginBottom: '8px' }}>Username</p>
+                    <input
+                      type="text"
+                      placeholder="Satoshi"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        height: '40px',
+                        fontSize: '14px',
+                        marginBottom: '16px'
+                      }}
+                    />
+                    <p style={{ color: '#666', marginBottom: '8px' }}>Password</p>
+                    <input
+                      type="password"
+                      placeholder="Satoshi"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        height: '40px',
+                        fontSize: '14px',
+                        marginBottom: '16px'
+                      }}
+                    />
+                    <p style={{ color: '#666', marginBottom: '8px' }}>Auth Code from browser extension</p>
+                    <input
+                      type="text"
+                      placeholder="Satoshi"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        height: '40px',
+                        fontSize: '14px',
+                        marginBottom: '16px'
+                      }}
+                    />
+                  </div>
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500'
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
               ) : slides[currentStep].hasReview ? (
                 <>
                   <div style={{ width: '90%' }}>
@@ -707,20 +992,32 @@ const AgentLauncher = () => {
               ) : (
                 <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
               )}
-              <button 
-                className="next-button"
-                onClick={handleNext}
-                disabled={currentStep === slides.length - 1}
-                style={{ 
-                  marginTop: '1rem',
-                  display: (currentStep === slides.length - 1 || 
-                          currentStep === 5 || 
-                          currentStep === 2 ||
-                          slides[currentStep].hasReview) ? 'none' : 'block' 
-                }}
-              >
-                {currentStep === 0 ? "Let's get started" : 'Continue'}
-              </button>
+              {currentStep === 0 ? (
+                <button 
+                  className="next-button"
+                  onClick={handleNext}
+                  style={{ marginTop: '1rem' }}
+                >
+                  Let's get started
+                </button>
+              ) : (
+                <button 
+                  className="next-button"
+                  onClick={handleNext}
+                  disabled={currentStep === slides.length - 1}
+                  style={{ 
+                    marginTop: '1rem',
+                    display: (currentStep === slides.length - 1 || 
+                            currentStep === 5 || 
+                            currentStep === 2 ||
+                            currentStep === 6 ||
+                            slides[currentStep].hasReview ||
+                            slides[currentStep].hasXDetails) ? 'none' : 'block'
+                  }}
+                >
+                  Continue
+                </button>
+              )}
             </div>
           </div>
         </motion.div>
