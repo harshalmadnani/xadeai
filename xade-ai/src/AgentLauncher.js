@@ -31,7 +31,6 @@ const AgentLauncher = () => {
   const [isCreating, setIsCreating] = useState(false);
   const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
   const [prompt, setPrompt] = useState('');
-  const [imagesPreloaded, setImagesPreloaded] = useState(false);
 
   const slides = [
     { image: '/picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
@@ -201,29 +200,22 @@ const AgentLauncher = () => {
     }
   };
 
+  // Add preloading function
+  const preloadImage = (src) => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.src = src;
+      img.onload = resolve;
+      img.onerror = reject;
+    });
+  };
+
+  // Preload next image when current step changes
   React.useEffect(() => {
-    const preloadImages = async () => {
-      const imagePromises = slides.map(slide => {
-        return new Promise((resolve, reject) => {
-          const img = new Image();
-          img.src = slide.image;
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-      });
-
-      try {
-        await Promise.all(imagePromises);
-        setImagesPreloaded(true);
-      } catch (error) {
-        console.error('Error preloading images:', error);
-        // Still set as true to not block rendering
-        setImagesPreloaded(true);
-      }
-    };
-
-    preloadImages();
-  }, []);
+    if (currentStep < slides.length - 1) {
+      preloadImage(slides[currentStep + 1].image);
+    }
+  }, [currentStep]);
 
   return (
     <div className="agent-launcher-container">
@@ -287,10 +279,9 @@ const AgentLauncher = () => {
                   height: '50%',
                   objectFit: "contain",
                   borderRadius: '12px',
-                  opacity: imagesPreloaded ? 1 : 0,
-                  transition: 'opacity 0.3s ease-in',
-                  loading: "eager",
                 }}
+                loading="eager"
+                decoding="async"
               />
             </div>
             
