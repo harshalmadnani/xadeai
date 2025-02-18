@@ -117,38 +117,6 @@ function App() {
     return tabs[index] || '';
   };
 
-  useEffect(() => {
-    const tabName = getTabName(selectedTab).toLowerCase().replace(/\s+/g, '-');
-    let agentParam = '';
-    
-    // Only add agent parameter for Chat and Terminal tabs
-    if (selectedTab === 0 || selectedTab === 1) {
-      if (selectedAgent && selectedAgentName) {
-        const formattedAgentName = selectedAgentName.toLowerCase().replace(/\s+/g, '-');
-        agentParam = `/${formattedAgentName}`;
-      }
-    }
-    
-    navigate(`/${tabName}${agentParam}`, { replace: true });
-  }, [selectedTab, selectedAgent, selectedAgentName, navigate]);
-
-  // Update URL parsing logic
-  useEffect(() => {
-    const pathParts = location.pathname.slice(1).split('/');
-    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board'];
-    const tabIndex = tabs.indexOf(pathParts[0]);
-    
-    if (tabIndex !== -1) {
-      setSelectedTab(tabIndex);
-    }
-
-    // Only set agent name for Chat and Terminal tabs
-    if (pathParts[1] && (tabIndex === 0 || tabIndex === 1)) {
-      const agentName = pathParts[1];
-      setSelectedAgentName(agentName.toUpperCase());
-    }
-  }, [location]);
-
   const handleTabChange = (event, newValue) => {
     setSelectedTab(newValue);
     setSidebarVisible(false);
