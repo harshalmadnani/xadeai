@@ -4,6 +4,11 @@ import { IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import './AgentLauncher.css';
 import { useNavigate } from 'react-router-dom';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = 'https://wbsnlpviggcnwqfyfobh.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indic25scHZpZ2djbndxZnlmb2JoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODc2NTcwNiwiZXhwIjoyMDU0MzQxNzA2fQ.tr6PqbiAXQYSQSpG2wS6I4DZfV1Gc3dLXYhKwBrJLS0';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 const loadingAnimation = {
   display: 'inline-block',
@@ -183,14 +188,61 @@ const AgentLauncher = () => {
   const handleCreateAgent = async () => {
     setIsCreating(true);
     try {
-      // Simulate a delay for the creation process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      // Handle the creation logic
+      // Check if bucket exists, if not create it
+      const { error: bucketError } = await supabase
+        .storage
+        .createBucket('images', {
+          public: true,
+          allowedMimeTypes: ['image/jpeg', 'image/png', 'image/gif'],
+          fileSizeLimit: 1024 * 1024 * 2 // 2MB
+        });
+
+      // Upload image to storage if exists
+      let imageUrl = null;
+      if (agentImage) {
+        const fileExt = agentImage.name.split('.').pop();
+        const filePath = `agent-images/${Date.now()}.${fileExt}`;
+        
+        const { error: uploadError, data } = await supabase.storage
+          .from('images')
+          .upload(filePath, agentImage, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          
+        if (uploadError) throw uploadError;
+        
+        // Get the public URL for the uploaded image
+        const { data: { publicUrl } } = supabase.storage
+          .from('images')
+          .getPublicUrl(filePath);
+        
+        imageUrl = publicUrl;
+      }
+
+      // Get current user session
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+
+      // Insert agent data into agents2 table
+      const { error } = await supabase
+        .from('agents2')
+        .insert([
+          {
+            name: agentName,
+            description: agentDescription,
+            prompt: prompt,
+            image: imageUrl,
+            user_id: session?.user?.id // Get current user's ID from session
+          }
+        ]);
+
+      if (error) throw error;
+
       console.log('Agent created successfully');
       handleNext();
     } catch (error) {
       console.error('Error creating agent:', error);
-    } finally {
       setIsCreating(false);
     }
   };

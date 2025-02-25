@@ -7,18 +7,40 @@ const supabaseUrl = 'https://wbsnlpviggcnwqfyfobh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indic25scHZpZ2djbndxZnlmb2JoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODc2NTcwNiwiZXhwIjoyMDU0MzQxNzA2fQ.tr6PqbiAXQYSQSpG2wS6I4DZfV1Gc3dLXYhKwBrJLS0';
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-function Terminal() {
+function Terminal({ selectedAgent }) {
   const [history, setHistory] = useState([]);
-  const [selectedAgent, setSelectedAgent] = useState(null);
+  const [agentTweets, setAgentTweets] = useState([]);
+  const [agentNames, setAgentNames] = useState({});
   const terminalRef = useRef(null);
 
-  // Add useEffect for Perplexity API calls
   useEffect(() => {
+    fetchAgentNames();
     fetchMessages();
-    // Set up interval for Perplexity API calls
     const interval = setInterval(fetchCryptoNews, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    fetchMessages();
+  }, [selectedAgent]);
+
+  const fetchAgentNames = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('agents2')
+        .select('id, name');
+      
+      if (error) throw error;
+      
+      const namesMap = {};
+      data.forEach(agent => {
+        namesMap[agent.id] = agent.name;
+      });
+      setAgentNames(namesMap);
+    } catch (error) {
+      console.error('Error fetching agent names:', error);
+    }
+  };
 
   // Function to fetch crypto news from Perplexity
   const fetchCryptoNews = async () => {
@@ -66,30 +88,29 @@ function Terminal() {
     }
   };
 
-  // Function to fetch messages from Supabase
+  // Modify fetchMessages to get data from terminal2 table
   const fetchMessages = async () => {
-    const { data, error } = await supabase
-      .from('terminal')
-      .select('agent_2');
+    // Only fetch messages if an agent is selected
+    if (!selectedAgent) return;
 
-    if (error) {
-      console.error('Error fetching messages:', error);
-      // Set default crypto-related messages
-      setHistory([
-        { type: 'output', content: 'ETH moving nicely in range post-RL drop. Above MH might see a macro mid push. More breakouts could mean YO and new highs. Keep watching.' },
-        { type: 'output', content: '$LTC at $131.40, up 9.32% - testing resistance. Breakout or rejection? Momentum\'s there, but needs confirmation. Big moment for Litecoin\'s direction.' },
-        { type: 'output', content: 'Mirai Labs raises $4M in seed to scale AI and Rust teams. Focus on tech could lead to breakthroughs but watch for product-market fit.' },
+    const { data: agentsData, error: agentsError } = await supabase
+      .from('terminal2')
+      .select('agent_id, tweet_content')
+      .eq('agent_id', selectedAgent)
+      .order('created_at', { ascending: false });
 
-      ]);
+    if (agentsError) {
+      console.error('Error fetching messages:', agentsError);
       return;
     }
 
-    if (data) {
-      // Convert the fetched data to terminal history format
-      const messages = data.map(item => ({
+    if (agentsData) {
+      const messages = agentsData.map(item => ({
         type: 'output',
-        content: item.agent_2
+        agentId: item.agent_id,
+        content: item.tweet_content
       }));
+      setAgentTweets(messages);
       setHistory(messages);
     }
   };
@@ -123,7 +144,9 @@ function Terminal() {
               marginBottom: '16px',
             }}
           >
-            <span style={{ color: '#64ff64' }}>{entry.type === 'input' ? '> ' : 'Alphachad: '}</span>
+            <span style={{ color: '#64ff64' }}>
+              {entry.type === 'input' ? '> ' : `${agentNames[entry.agentId] || `Agent ${entry.agentId}`}: `}
+            </span>
             {entry.content}
           </div>
         ))}

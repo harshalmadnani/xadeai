@@ -63,47 +63,43 @@ function App() {
     if (authenticated && user) {
       const walletAddress = user.wallet?.address;
       console.log('User wallet address:', walletAddress);
-      
-      const storeWalletAddress = async () => {
-        try {
-          const { data, error } = await supabase
-            .from('users')
-            .upsert({ 
-              wallet_address: walletAddress,
-            }, { onConflict: 'wallet_address' });
-            
-          if (error) throw error;
-          console.log('Wallet address stored successfully');
-        } catch (error) {
-          console.error('Error storing wallet address:', error);
-        }
-      };
-
-      if (walletAddress) {
-        storeWalletAddress();
-      }
     }
   }, [authenticated, user]);
 
-  // Add NFT check when user is authenticated
   useEffect(() => {
     const checkNFTOwnership = async (walletAddress) => {
+      console.log('Starting NFT ownership check for wallet:', walletAddress);
       try {
-        const response = await fetch(`https://production-api.mobula.io/api/1/wallet/nfts?wallet=${walletAddress}`, {
+        const response = await fetch(`https://production-api.mobula.io/api/1/wallet/nfts?wallet=${walletAddress}&chain=polygon`, {
           method: 'GET'
         });
         const data = await response.json();
+        console.log('Mobula API response:', data);
         
-        // Check if the wallet owns an NFT from the specific contract
-        const hasRequiredNFT = data.data?.some(nft => 
-          nft.contract_address.toLowerCase() === '0x01D593b02ed918acF3e293Ae18aE84b1fE3fe8Cf'.toLowerCase()
-        );
+        if (!data?.data) {
+          console.log('No NFT data found in response');
+          setHasNFT(false);
+          setCheckingNFT(false);
+          return;
+        }
         
-        setHasNFT(hasRequiredNFT);
+        // Check if any NFT matches our target contract address
+        const targetContract = '0xa219462a1f7187b7d859e2985ab3936fd4cbec85';
+        console.log('Checking for NFTs from contract:', targetContract);
+        
+        const hasNFT = data.data.some(nft => {
+          const matches = nft?.token_address?.toLowerCase() === targetContract.toLowerCase();
+          console.log('Checking NFT contract:', nft?.token_address, 'Match:', matches);
+          return matches;
+        });
+        
+        console.log('Final NFT ownership status:', hasNFT);
+        setHasNFT(hasNFT);
         setCheckingNFT(false);
       } catch (error) {
         console.error('Error checking NFT ownership:', error);
         setCheckingNFT(false);
+        setHasNFT(false);
       }
     };
 
@@ -121,6 +117,37 @@ function App() {
     setSelectedTab(newValue);
     setSidebarVisible(false);
   };
+  useEffect(() => {
+    const tabName = getTabName(selectedTab).toLowerCase().replace(/\s+/g, '-');
+    let agentParam = '';
+    
+    // Only add agent parameter for Chat and Terminal tabs
+    if (selectedTab === 0 || selectedTab === 1) {
+      if (selectedAgent && selectedAgentName) {
+        const formattedAgentName = selectedAgentName.toLowerCase().replace(/\s+/g, '-');
+        agentParam = `/${formattedAgentName}`;
+      }
+    }
+    
+    navigate(`/${tabName}${agentParam}`, { replace: true });
+  }, [selectedTab, selectedAgent, selectedAgentName, navigate]);
+
+  // Update URL parsing logic
+  useEffect(() => {
+    const pathParts = location.pathname.slice(1).split('/');
+    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board'];
+    const tabIndex = tabs.indexOf(pathParts[0]);
+    
+    if (tabIndex !== -1) {
+      setSelectedTab(tabIndex);
+    }
+
+    // Only set agent name for Chat and Terminal tabs
+    if (pathParts[1] && (tabIndex === 0 || tabIndex === 1)) {
+      const agentName = pathParts[1];
+      setSelectedAgentName(agentName.toUpperCase());
+    }
+  }, [location]);
 
   const NavigationTabs = () => (
     <Tabs
@@ -535,7 +562,7 @@ function App() {
             {selectedTab === 0 ? (
               <ChatInterface selectedAgent={agents.find(agent => agent.id === selectedAgent)} />
             ) : selectedTab === 1 ? (
-              <Terminal />
+              <Terminal selectedAgent={selectedAgent} />
             ) : selectedTab === 2 ? (
               <AgentLauncher />
             ) : (

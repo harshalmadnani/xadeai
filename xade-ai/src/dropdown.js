@@ -6,7 +6,7 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 const AgentDropdown = ({ onAgentSelect }) => {
-  const [agents, setAgents] = useState([]);
+  const [agents, setAgents] = useState([1]);
   const [selectedAgent, setSelectedAgent] = useState(1);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -17,8 +17,8 @@ const AgentDropdown = ({ onAgentSelect }) => {
   const fetchAgents = async () => {
     try {
       const { data, error } = await supabase
-        .from('agents')
-        .select('id,agent_name,image')
+        .from('agents2')
+        .select('id,name,image')
         .order('id', { ascending: true });
       
       if (error) throw error;
@@ -33,7 +33,7 @@ const AgentDropdown = ({ onAgentSelect }) => {
     setIsOpen(false);
     if (onAgentSelect) {
       const selectedAgent = agents.find(agent => agent.id === agentId);
-      onAgentSelect(agentId, selectedAgent?.agent_name);
+      onAgentSelect(agentId, selectedAgent?.name);
     }
   };
 
@@ -59,7 +59,7 @@ const AgentDropdown = ({ onAgentSelect }) => {
           <>
             <img
               src={selectedAgentData.image}
-              alt={selectedAgentData.agent_name}
+              alt={selectedAgentData.name}
               style={{
                 width: '30px',
                 height: '30px',
@@ -67,7 +67,7 @@ const AgentDropdown = ({ onAgentSelect }) => {
                 objectFit: 'cover'
               }}
             />
-            <span>{selectedAgentData.agent_name}</span>
+            <span>{selectedAgentData.name}</span>
           </>
         )}
       </button>
@@ -106,7 +106,7 @@ const AgentDropdown = ({ onAgentSelect }) => {
             >
               <img
                 src={agent.image}
-                alt={agent.agent_name}
+                alt={agent.name}
                 style={{
                   width: '30px',
                   height: '30px',
@@ -114,7 +114,7 @@ const AgentDropdown = ({ onAgentSelect }) => {
                   objectFit: 'cover'
                 }}
               />
-              <span>{agent.agent_name}</span>
+              <span>{agent.name}</span>
             </div>
           ))}
         </div>

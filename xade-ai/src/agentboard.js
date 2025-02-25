@@ -21,7 +21,7 @@ function Agentboard() {
   const fetchAgents = async () => {
     try {
       const { data, error } = await supabase
-        .from('agents')
+        .from('agents2')
         .select('*');
       if (error) throw error;
       setAgents(data);
@@ -72,7 +72,7 @@ function Agentboard() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
               <img
                 src={agent.image}
-                alt={agent.agent_name}
+                alt={agent.name}
                 style={{
                   width: '3.5rem',
                   height: '3.5rem',
@@ -84,7 +84,7 @@ function Agentboard() {
                 src="1111.png"
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/chat/${agent.agent_name}`);
+                  navigate(`/chat/${agent.name}`);
                 }}
                 style={{ 
                   width: '2.5rem',
@@ -103,7 +103,7 @@ function Agentboard() {
                 marginBottom: '0.5rem',
                 textAlign: 'left',
                 fontFamily: 'GeneralSans-Medium'
-              }}>{agent.agent_name}</h3>
+              }}>{agent.name}</h3>
               <p style={{
                 color: '#888',
                 fontSize: '0.9rem',
@@ -139,7 +139,7 @@ function Agentboard() {
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
-                  navigate(`/terminal/${agent.agent_name}`);
+                  navigate(`/terminal/${agent.name}`);
                 }}
                 style={{
                   backgroundColor: '#222',
@@ -196,7 +196,7 @@ function Agentboard() {
             }}>
               <img
                 src={selectedAgent.image}
-                alt={selectedAgent.agent_name}
+                alt={selectedAgent.name}
                 style={{
                   width: '5rem',
                   height: '5rem',
@@ -208,7 +208,7 @@ function Agentboard() {
                 fontSize: '1.5rem',
                 fontWeight: 'bold',
                 color: 'white'
-              }}>{selectedAgent.agent_name}</h2>
+              }}>{selectedAgent.name}</h2>
             </div>
             <p style={{
               color: '#d1d5db',
