@@ -45,8 +45,8 @@ function App() {
     const fetchAgents = async () => {
       try {
         const { data, error } = await supabase
-          .from('agents')
-          .select('id,agent_name,image')
+          .from('agents2')
+          .select('id,name,image')
           .order('id', { ascending: true });
         
         if (error) throw error;
@@ -485,7 +485,6 @@ function App() {
                 setSelectedAgentName(name);
               }} 
               defaultAgent={1}
-              defaultAgentName="ALPHACHAD"
             />
           )}
         </div>
@@ -560,7 +559,7 @@ function App() {
             width: '100%'
           }}>
             {selectedTab === 0 ? (
-              <ChatInterface selectedAgent={agents.find(agent => agent.id === selectedAgent)} />
+              <ChatInterface selectedAgent={selectedAgent} />
             ) : selectedTab === 1 ? (
               <Terminal selectedAgent={selectedAgent} />
             ) : selectedTab === 2 ? (

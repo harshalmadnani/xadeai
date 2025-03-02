@@ -39,6 +39,18 @@ const AgentLauncher = () => {
   const [selectedCharacter, setSelectedCharacter] = useState('presets');
   const [selectedPreset, setSelectedPreset] = useState('');
   const [setupX, setSetupX] = useState(false);
+  const [postingClients, setPostingClients] = useState([]);
+  const [postingInterval, setPostingInterval] = useState('60');
+  const [chatClients, setChatClients] = useState([]);
+  const [replyToUsernames, setReplyToUsernames] = useState('');
+  const [replyToReplies, setReplyToReplies] = useState(false);
+  const [exampleQueries, setExampleQueries] = useState('');
+  const [examplePosts, setExamplePosts] = useState('');
+  const [qaList, setQaList] = useState([]);
+  const [postList, setPostList] = useState([]);
+  const [currentQuestion, setCurrentQuestion] = useState('');
+  const [currentAnswer, setCurrentAnswer] = useState('');
+  const [currentPost, setCurrentPost] = useState('');
 
   const characterOptions = [
     { value: 'presets', label: 'Presets' },
@@ -61,10 +73,22 @@ const AgentLauncher = () => {
       hasUpload: true 
     },
     { 
-      image: '/picture4.png', 
-      title: `What do you want ${agentName || 'your agent'} to do?`, 
-      content: 'Enter the prompt',
-      hasPrompt: true 
+      image: '/picture7.png', 
+      title: `What kind of activity do you want\n${agentName || 'your agent'} to do?`, 
+      content: '',
+      hasActivities: true 
+    },
+    { 
+      image: '/picture10.png', 
+      title: `Posting Configuration`, 
+      content: 'Configure how your agent will post content',
+      hasPostingConfig: true 
+    },
+    { 
+      image: '/picture11.png', 
+      title: `Chat and Interaction Configuration`, 
+      content: 'Configure how your agent will interact with others',
+      hasChatConfig: true 
     },
     { 
       image: '/picture5.png', 
@@ -72,42 +96,23 @@ const AgentLauncher = () => {
       content: 'You can search for actions and sources',
       hasDataSources: true 
     },
+    { 
+      image: '/picture4.png', 
+      title: `How do you want ${agentName || 'your agent'} to sound?`, 
+      content: 'Enter the prompt',
+      hasPrompt: true 
+    },
     {
-      image: '/picture16.png',
-      title: 'Choose the character for\nyour agent',
-      content: '',
-      hasCharacterSelect: true
+      image: '/picture4.png',
+      title: `Let's see some examples from ${agentName || 'your agent'}`,
+      content: 'Add example interactions and posts',
+      hasExamples: true
     },
     { 
       image: '/picture6.png', 
       title: `Would you like to\nconfigure X account\nfor ${agentName || 'your agent'} now?`, 
       content: '',
       hasXConfig: true 
-    },
-    {
-      image: '/picture12.png',
-      title: 'Label your agent\naccount as automated',
-      content: '',
-      hasXLabel: true,
-      previewImage: '/picture15.png'
-    },
-    {
-      image: '/picture13.png',
-      title: 'Download browser\nextension',
-      content: '',
-      hasXExtension: true
-    },
-    {
-      image: '/picture14.png',
-      title: 'Enter details',
-      content: '',
-      hasXDetails: true
-    },
-    { 
-      image: '/picture7.png', 
-      title: `What kind of activity do you want\n${agentName || 'your agent'} to do?`, 
-      content: '',
-      hasActivities: true 
     },
     {
       image: '/picture10.png',
@@ -140,7 +145,7 @@ const AgentLauncher = () => {
 
   const handleNext = () => {
     if (currentStep < slides.length - 1) {
-      if (currentStep === 6 && !setupX) {
+      if (currentStep === 9 && !setupX) {
         setCurrentStep(10);
       } else {
         setCurrentStep(currentStep + 1);
@@ -224,6 +229,20 @@ const AgentLauncher = () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
 
+      // Prepare post and chat configurations
+      const postConfiguration = {
+        clients: postingClients,
+        interval: parseInt(postingInterval),
+        enabled: postingClients.length > 0
+      };
+
+      const chatConfiguration = {
+        clients: chatClients,
+        reply_to_usernames: replyToUsernames.split(',').map(u => u.trim()).filter(u => u),
+        reply_to_replies: replyToReplies,
+        enabled: chatClients.length > 0
+      };
+
       // Insert agent data into agents2 table
       const { error } = await supabase
         .from('agents2')
@@ -233,7 +252,16 @@ const AgentLauncher = () => {
             description: agentDescription,
             prompt: prompt,
             image: imageUrl,
-            user_id: session?.user?.id // Get current user's ID from session
+            user_id: session?.user?.id,
+            data_sources: selectedSources,
+            activities: selectedActivities,
+            sample_questions: qaList.map(qa => ({
+              question: qa.question,
+              answer: qa.answer
+            })),
+            sample_posts: postList,
+            post_configuration: postConfiguration,
+            chat_configuration: chatConfiguration
           }
         ]);
 
@@ -243,6 +271,8 @@ const AgentLauncher = () => {
       handleNext();
     } catch (error) {
       console.error('Error creating agent:', error);
+      alert(`Failed to create agent: ${error.message || error}`);
+    } finally {
       setIsCreating(false);
     }
   };
@@ -288,6 +318,52 @@ const AgentLauncher = () => {
     } finally {
       setIsImprovingPrompt(false);
     }
+  };
+
+  const handleAddQA = () => {
+    if (currentQuestion.trim() && currentAnswer.trim()) {
+      const newQA = {
+        question: currentQuestion.trim(),
+        answer: currentAnswer.trim()
+      };
+      setQaList([...qaList, newQA]);
+      setCurrentQuestion('');
+      setCurrentAnswer('');
+      // Update exampleQueries for the final submission
+      setExampleQueries(prev => {
+        const newQueries = [...qaList, newQA]
+          .map(qa => `Q: ${qa.question}\nA: ${qa.answer}`)
+          .join('\n\n');
+        return newQueries;
+      });
+    }
+  };
+
+  const handleAddPost = () => {
+    if (currentPost.trim()) {
+      const newPost = currentPost.trim();
+      setPostList([...postList, newPost]);
+      setCurrentPost('');
+      // Update examplePosts for the final submission
+      setExamplePosts(prev => {
+        const newPosts = [...postList, newPost].join('\n\n');
+        return newPosts;
+      });
+    }
+  };
+
+  const handleRemoveQA = (index) => {
+    const newList = qaList.filter((_, i) => i !== index);
+    setQaList(newList);
+    setExampleQueries(
+      newList.map(qa => `Q: ${qa.question}\nA: ${qa.answer}`).join('\n\n')
+    );
+  };
+
+  const handleRemovePost = (index) => {
+    const newList = postList.filter((_, i) => i !== index);
+    setPostList(newList);
+    setExamplePosts(newList.join('\n\n'));
   };
 
   return (
@@ -444,14 +520,14 @@ const AgentLauncher = () => {
                   )}
                 </>
               ) : slides[currentStep].hasPrompt ? (
-                <>
+                <div style={{ width: '90%' }}>
                   <p>{slides[currentStep].content}</p>
                   <textarea
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     placeholder="Be as specific as possible"
                     style={{
-                      width: '90%',
+                      width: '100%',
                       padding: '12px',
                       marginBottom: '20px',
                       backgroundColor: '#1a1a1a',
@@ -494,62 +570,267 @@ const AgentLauncher = () => {
                       {isImprovingPrompt ? 'Improving...' : 'Improve Prompt'}
                     </button>
                   </div>
-                </>
-              ) : slides[currentStep].hasDataSources ? (
-                <>
-                  <p>{slides[currentStep].content}</p>
-                  <div style={{
-                    width: '90%',
-                    marginBottom: '20px'
-                  }}>
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="What are you looking for?"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: '#1a1a1a',
-                        border: 'none',
-                        borderRadius: '10px',
-                        color: 'white',
-                        height: '40px',
-                        fontSize: '14px',
-                        marginBottom: '16px'
-                      }}
-                    />
-                    <div style={{
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      gap: '8px',
-                      marginBottom: '20px'
+                  
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      marginTop: '20px'
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              ) : slides[currentStep].hasExamples ? (
+                <div style={{ width: '90%' }}>
+                  <div style={{ marginBottom: '24px' }}>
+                    <p style={{ 
+                      marginBottom: '12px', 
+                      fontSize: '16px',
+                      fontWeight: '500' 
+                    }}>Example Conversations</p>
+                    
+                    {/* Q&A Input Section */}
+                    <div style={{ 
+                      backgroundColor: '#1a1a1a',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '16px'
                     }}>
-                      {filteredSources.map((source, index) => (
-                        <span
-                          key={index}
-                          onClick={() => handleSourceClick(source)}
+                      <input
+                        value={currentQuestion}
+                        onChange={(e) => setCurrentQuestion(e.target.value)}
+                        placeholder="Enter a question..."
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: '#2a2a2a',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: 'white',
+                          marginBottom: '8px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      <textarea
+                        value={currentAnswer}
+                        onChange={(e) => setCurrentAnswer(e.target.value)}
+                        placeholder="Enter the answer..."
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: '#2a2a2a',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: 'white',
+                          minHeight: '80px',
+                          fontSize: '14px',
+                          marginBottom: '8px',
+                          resize: 'vertical'
+                        }}
+                      />
+                      <button
+                        onClick={handleAddQA}
+                        disabled={!currentQuestion.trim() || !currentAnswer.trim()}
+                        style={{
+                          backgroundColor: currentQuestion.trim() && currentAnswer.trim() ? 'white' : '#666',
+                          color: currentQuestion.trim() && currentAnswer.trim() ? 'black' : '#999',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: currentQuestion.trim() && currentAnswer.trim() ? 'pointer' : 'default',
+                          width: '100%'
+                        }}
+                      >
+                        Add Q&A
+                      </button>
+                    </div>
+
+                    {/* Q&A List */}
+                    {qaList.map((qa, index) => (
+                      <div key={index} style={{
+                        backgroundColor: '#2a2a2a',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        marginBottom: '8px',
+                        position: 'relative'
+                      }}>
+                        <p style={{ margin: '0 0 8px 0', fontWeight: '500' }}>Q: {qa.question}</p>
+                        <p style={{ margin: '0', color: '#ccc' }}>A: {qa.answer}</p>
+                        <button
+                          onClick={() => handleRemoveQA(index)}
                           style={{
-                            backgroundColor: '#1a1a1a',
-                            padding: '8px 16px',
-                            borderRadius: '20px',
-                            color: 'white',
-                            fontSize: '14px',
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: '#666',
                             cursor: 'pointer',
-                            border: selectedSources.includes(source) ? '1px solid white' : '1px solid transparent'
+                            padding: '4px',
+                            fontSize: '14px'
                           }}
                         >
-                          {source}
-                        </span>
-                      ))}
-                    </div>
+                          ×
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                </>
-              ) : slides[currentStep].hasCharacterSelect ? (
+
+                  {/* Posts Section */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <p style={{ 
+                      marginBottom: '12px',
+                      fontSize: '16px',
+                      fontWeight: '500'
+                    }}>Example Posts</p>
+
+                    {/* Post Input Section */}
+                    <div style={{ 
+                      backgroundColor: '#1a1a1a',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '16px'
+                    }}>
+                      <textarea
+                        value={currentPost}
+                        onChange={(e) => setCurrentPost(e.target.value)}
+                        placeholder="Enter an example post..."
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: '#2a2a2a',
+                          border: 'none',
+                          borderRadius: '8px',
+                          color: 'white',
+                          minHeight: '100px',
+                          fontSize: '14px',
+                          marginBottom: '8px',
+                          resize: 'vertical'
+                        }}
+                      />
+                      <button
+                        onClick={handleAddPost}
+                        disabled={!currentPost.trim()}
+                        style={{
+                          backgroundColor: currentPost.trim() ? 'white' : '#666',
+                          color: currentPost.trim() ? 'black' : '#999',
+                          padding: '8px 16px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: currentPost.trim() ? 'pointer' : 'default',
+                          width: '100%'
+                        }}
+                      >
+                        Add Post
+                      </button>
+                    </div>
+
+                    {/* Posts List */}
+                    {postList.map((post, index) => (
+                      <div key={index} style={{
+                        backgroundColor: '#2a2a2a',
+                        borderRadius: '8px',
+                        padding: '12px',
+                        marginBottom: '8px',
+                        position: 'relative'
+                      }}>
+                        <p style={{ margin: '0' }}>{post}</p>
+                        <button
+                          onClick={() => handleRemovePost(index)}
+                          style={{
+                            position: 'absolute',
+                            top: '8px',
+                            right: '8px',
+                            backgroundColor: 'transparent',
+                            border: 'none',
+                            color: '#666',
+                            cursor: 'pointer',
+                            padding: '4px',
+                            fontSize: '14px'
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Tips Section */}
+                  <div style={{ 
+                    backgroundColor: '#1a1a1a',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    marginBottom: '24px'
+                  }}>
+                    <div style={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '8px'
+                    }}>
+                      <img 
+                        src="/info-icon.png" 
+                        alt="Info"
+                        style={{ 
+                          width: '16px',
+                          height: '16px',
+                          opacity: 0.7
+                        }}
+                      />
+                      <p style={{ 
+                        margin: 0,
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}>Tips for better results:</p>
+                    </div>
+                    <ul style={{ 
+                      margin: '0',
+                      paddingLeft: '24px',
+                      color: '#999',
+                      fontSize: '14px'
+                    }}>
+                      <li>Add diverse examples to show different interaction styles</li>
+                      <li>Include both technical and casual conversations</li>
+                      <li>Use emojis and formatting to make posts engaging</li>
+                      <li>Show how to handle different types of questions</li>
+                    </ul>
+                  </div>
+
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      fontSize: '16px'
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              ) : slides[currentStep].hasDataSources ? (
                 <div style={{ width: '90%' }}>
-                  <select
-                    value={selectedCharacter}
-                    onChange={(e) => setSelectedCharacter(e.target.value)}
+                  <p>{slides[currentStep].content}</p>
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="What are you looking for?"
                     style={{
                       width: '100%',
                       padding: '12px',
@@ -557,182 +838,215 @@ const AgentLauncher = () => {
                       border: 'none',
                       borderRadius: '10px',
                       color: 'white',
-                      height: '48px',
+                      height: '40px',
                       fontSize: '14px',
-                      marginBottom: '20px',
-                      appearance: 'none',
-                      backgroundImage: `url('data:image/svg+xml;charset=US-ASCII,<svg width="14" height="8" viewBox="0 0 14 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L7 7L13 1" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>')`,
-                      backgroundRepeat: 'no-repeat',
-                      backgroundPosition: 'right 12px center',
-                      cursor: 'pointer'
+                      marginBottom: '16px'
                     }}
-                  >
-                    {characterOptions.map(option => (
-                      <option key={option.value} value={option.value}>{option.label}</option>
-                    ))}
-                  </select>
-
-                  {selectedCharacter === 'presets' && (
-                    <div style={{
-                      display: 'flex',
-                      gap: '8px',
-                      marginBottom: '20px'
-                    }}>
-                      {['Degen Analyst', 'Analyst', 'Degen'].map(preset => (
-                        <button
-                          key={preset}
-                          onClick={() => setSelectedPreset(preset)}
-                          style={{
-                            backgroundColor: selectedPreset === preset ? '#fff' : '#1a1a1a',
-                            padding: '8px 16px',
-                            borderRadius: '20px',
-                            color: selectedPreset === preset ? '#000' : '#fff',
-                            border: 'none',
-                            cursor: 'pointer',
-                            fontSize: '14px',
-                            transition: 'all 0.2s ease'
-                          }}
-                        >
-                          {preset}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-
-                  {selectedCharacter === 'username' && (
-                    <input
-                      type="text"
-                      placeholder="@satoshi.xyz"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: '#1a1a1a',
-                        border: 'none',
-                        borderRadius: '10px',
-                        color: 'white',
-                        height: '40px',
-                        fontSize: '14px',
-                        marginBottom: '20px'
-                      }}
-                    />
-                  )}
-
-                  {selectedCharacter === 'prompt' && (
-                    <input
-                      type="text"
-                      placeholder="Enter your character prompt"
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        backgroundColor: '#1a1a1a',
-                        border: 'none',
-                        borderRadius: '10px',
-                        color: 'white',
-                        height: '40px',
-                        fontSize: '14px',
-                        marginBottom: '20px'
-                      }}
-                    />
-                  )}
-
-                  {(selectedPreset || selectedCharacter !== 'presets') && (
-                    <button 
-                      className="next-button"
-                      onClick={handleNext}
-                      style={{
-                        width: '100%',
-                        backgroundColor: 'white',
-                        color: 'black',
-                        padding: '12px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        fontWeight: '500',
-                        marginTop: '20px'
-                      }}
-                    >
-                      Continue
-                    </button>
-                  )}
-                </div>
-              ) : slides[currentStep].hasActivities ? (
-                <>
-                  <p>{slides[currentStep].content}</p>
+                  />
                   <div style={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: '20px',
-                    width: '90%'
+                    flexWrap: 'wrap',
+                    gap: '8px',
+                    marginBottom: '20px'
                   }}>
-                    <div style={{
-                      display: 'flex',
-                      gap: '16px'
-                    }}>
-                      <div 
-                        onClick={() => handleActivitySelect('post')}
+                    {filteredSources.map((source, index) => (
+                      <span
+                        key={index}
+                        onClick={() => handleSourceClick(source)}
                         style={{
-                          flex: 1,
                           backgroundColor: '#1a1a1a',
-                          padding: '16px',
-                          borderRadius: '12px',
+                          padding: '8px 16px',
+                          borderRadius: '20px',
+                          color: 'white',
+                          fontSize: '14px',
                           cursor: 'pointer',
-                          border: selectedActivities.includes('post') ? '1px solid white' : '1px solid transparent'
+                          border: selectedSources.includes(source) ? '1px solid white' : '1px solid transparent'
                         }}
                       >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>Post on X</span>
-                          <div style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            border: '2px solid white',
-                            backgroundColor: selectedActivities.includes('post') ? 'white' : 'transparent'
-                          }} />
-                        </div>
-                        <img 
-                          src="picture8.png" 
-                          alt="Post on X" 
-                          style={{
-                            width: '100%',
-                            marginTop: '12px',
-                            borderRadius: '8px'
-                          }}
-                        />
-                      </div>
-                      <div 
-                        onClick={() => handleActivitySelect('trade')}
-                        style={{
-                          flex: 1,
-                          backgroundColor: '#1a1a1a',
-                          padding: '16px',
-                          borderRadius: '12px',
-                          cursor: 'pointer',
-                          border: selectedActivities.includes('trade') ? '1px solid white' : '1px solid transparent'
-                        }}
-                      >
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span>Make Trades</span>
-                          <div style={{
-                            width: '20px',
-                            height: '20px',
-                            borderRadius: '50%',
-                            border: '2px solid white',
-                            backgroundColor: selectedActivities.includes('trade') ? 'white' : 'transparent'
-                          }} />
-                        </div>
-                        <img 
-                          src="picture9.png" 
-                          alt="Make Trades" 
-                          style={{
-                            width: '100%',
-                            marginTop: '12px',
-                            borderRadius: '8px'
-                          }}
-                        />
-                      </div>
-                    </div>
+                        {source}
+                      </span>
+                    ))}
                   </div>
-                </>
+                  
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      marginTop: '20px'
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              ) : slides[currentStep].hasPostingConfig ? (
+                <div style={{ width: '90%' }}>
+                  <p style={{ marginBottom: '20px' }}>Choose the clients for posting:</p>
+                  <div style={{
+                    display: 'flex',
+                    gap: '10px',
+                    marginBottom: '20px'
+                  }}>
+                    <button
+                      onClick={() => setPostingClients(prev => 
+                        prev.includes('terminal') ? prev.filter(c => c !== 'terminal') : [...prev, 'terminal']
+                      )}
+                      style={{
+                        backgroundColor: postingClients.includes('terminal') ? '#fff' : '#1a1a1a',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        color: postingClients.includes('terminal') ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Xade Terminal
+                    </button>
+                    <button
+                      onClick={() => setPostingClients(prev => 
+                        prev.includes('x') ? prev.filter(c => c !== 'x') : [...prev, 'x']
+                      )}
+                      style={{
+                        backgroundColor: postingClients.includes('x') ? '#fff' : '#1a1a1a',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        color: postingClients.includes('x') ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      X
+                    </button>
+                  </div>
+                  
+                  <p style={{ marginBottom: '10px' }}>Choose posting interval (minutes):</p>
+                  <input
+                    type="number"
+                    value={postingInterval}
+                    onChange={(e) => setPostingInterval(e.target.value)}
+                    min="1"
+                    placeholder="60"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      height: '40px',
+                      fontSize: '14px',
+                      marginBottom: '20px'
+                    }}
+                  />
+                </div>
+              ) : slides[currentStep].hasChatConfig ? (
+                <div style={{ width: '90%' }}>
+                  <p style={{ marginBottom: '20px' }}>Choose the clients for interaction:</p>
+                  <div style={{
+                    display: 'flex',
+                    gap: '10px',
+                    marginBottom: '20px'
+                  }}>
+                    <button
+                      onClick={() => setChatClients(prev => 
+                        prev.includes('terminal') ? prev.filter(c => c !== 'terminal') : [...prev, 'terminal']
+                      )}
+                      style={{
+                        backgroundColor: chatClients.includes('terminal') ? '#fff' : '#1a1a1a',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        color: chatClients.includes('terminal') ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      Xade Terminal
+                    </button>
+                    <button
+                      onClick={() => setChatClients(prev => 
+                        prev.includes('x') ? prev.filter(c => c !== 'x') : [...prev, 'x']
+                      )}
+                      style={{
+                        backgroundColor: chatClients.includes('x') ? '#fff' : '#1a1a1a',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        color: chatClients.includes('x') ? '#000' : '#fff',
+                        border: 'none',
+                        cursor: 'pointer',
+                        fontSize: '14px'
+                      }}
+                    >
+                      X
+                    </button>
+                  </div>
+                  
+                  <p style={{ marginBottom: '10px' }}>Enter usernames of accounts whose tweets you want the agent to reply to:</p>
+                  <textarea
+                    value={replyToUsernames}
+                    onChange={(e) => setReplyToUsernames(e.target.value)}
+                    placeholder="@username1, @username2, @username3"
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      minHeight: '80px',
+                      fontSize: '14px',
+                      marginBottom: '20px',
+                      resize: 'vertical'
+                    }}
+                  />
+                  
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    marginBottom: '20px'
+                  }}>
+                    <div
+                      onClick={() => setReplyToReplies(!replyToReplies)}
+                      style={{
+                        width: '20px',
+                        height: '20px',
+                        borderRadius: '4px',
+                        border: '2px solid white',
+                        backgroundColor: replyToReplies ? 'white' : 'transparent',
+                        cursor: 'pointer'
+                      }}
+                    />
+                    <span>Reply to post replies and quote tweets</span>
+                  </div>
+                  
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      marginTop: '20px'
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
               ) : slides[currentStep].hasXConfig ? (
                 <>
                   <p>{slides[currentStep].content}</p>
@@ -971,6 +1285,23 @@ const AgentLauncher = () => {
                           activity === 'trade' ? 'Making trades' : 'Posting on X'
                         ).join(', ')}</p>
                       </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ color: '#666', marginBottom: '8px' }}>Posting Configuration:</p>
+                        <p style={{ margin: 0 }}>
+                          Clients: {postingClients.length > 0 ? postingClients.map(c => c === 'terminal' ? 'Xade Terminal' : 'X').join(', ') : 'None'}<br/>
+                          Interval: {postingInterval} minutes
+                        </p>
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ color: '#666', marginBottom: '8px' }}>Chat Configuration:</p>
+                        <p style={{ margin: 0 }}>
+                          Clients: {chatClients.length > 0 ? chatClients.map(c => c === 'terminal' ? 'Xade Terminal' : 'X').join(', ') : 'None'}<br/>
+                          Reply to: {replyToUsernames || 'None'}<br/>
+                          Reply to replies and quotes: {replyToReplies ? 'Yes' : 'No'}
+                        </p>
+                      </div>
                     </div>
 
                     <button 
@@ -1024,7 +1355,7 @@ const AgentLauncher = () => {
                   <div style={{ width: '90%', textAlign: 'center' }}>
                     <button 
                       className="next-button"
-                      onClick={() => navigate('/chat/alphachad')}
+                      onClick={() => navigate(`/chat/${agentName}`)}
                       style={{
                         width: '100%',
                         backgroundColor: 'white',
@@ -1041,6 +1372,61 @@ const AgentLauncher = () => {
                     </button>
                   </div>
                 </>
+              ) : slides[currentStep].hasActivities ? (
+                <div style={{ width: '90%' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '16px',
+                    marginBottom: '20px'
+                  }}>
+                    <div
+                      onClick={() => handleActivitySelect('post')}
+                      style={{
+                        backgroundColor: '#1a1a1a',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        border: selectedActivities.includes('post') ? '1px solid white' : '1px solid transparent'
+                      }}
+                    >
+                      <img 
+                        src="/picture8.png" 
+                        alt="Post sentiently"
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          marginBottom: '8px',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <p style={{ margin: 0, textAlign: 'center' }}>Post sentiently</p>
+                    </div>
+                    
+                    <div
+                      onClick={() => handleActivitySelect('chat')}
+                      style={{
+                        backgroundColor: '#1a1a1a',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        border: selectedActivities.includes('chat') ? '1px solid white' : '1px solid transparent'
+                      }}
+                    >
+                      <img 
+                        src="/picture9.png" 
+                        alt="Chat and Interact"
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          marginBottom: '8px',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <p style={{ margin: 0, textAlign: 'center' }}>Chat and Interact</p>
+                    </div>
+                  </div>
+                </div>
               ) : (
                 <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
               )}
@@ -1063,6 +1449,8 @@ const AgentLauncher = () => {
                             currentStep === 5 || 
                             currentStep === 2 ||
                             currentStep === 6 ||
+                            currentStep === 7 ||
+                            currentStep === 8 ||
                             slides[currentStep].hasReview ||
                             slides[currentStep].hasXDetails) ? 'none' : 'block'
                   }}
