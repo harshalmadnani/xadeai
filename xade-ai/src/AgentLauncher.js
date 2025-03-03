@@ -286,15 +286,20 @@ const AgentLauncher = () => {
 
       if (error) throw error;
 
-      console.log('Agent created successfully');
-      
-      // Set up posting schedule if posting is enabled, but don't wait for it
-      if (postConfiguration.enabled && agentData && agentData.length > 0) {
-        const agentId = agentData[0].id;
+      // Only log success if we actually have agent data
+      if (agentData && agentData.length > 0) {
+        console.log('Agent created successfully:', agentData[0].id);
         
-        // Create the posting schedule in the background
-        // Don't await this - let it run independently
-        (async () => {
+        // Set up posting schedule if posting is enabled
+        if (postConfiguration.enabled) {
+          const agentId = agentData[0].id;
+          
+          console.log('Posting configuration is enabled. Setting up posting schedule for agent ID:', agentId);
+          console.log('Posting clients:', postingClients);
+          console.log('Posting interval:', postingInterval);
+          console.log('Posting topics:', postingTopics);
+          
+          // Create the posting schedule
           try {
             const postingPayload = {
               userId: agentId,
@@ -305,38 +310,144 @@ const AgentLauncher = () => {
             
             console.log('Sending posting schedule request with payload:', postingPayload);
             
-            try {
-              // Try with no-cors mode as a fallback
-              const response = await fetch(
-                'https://97m15gg62a.execute-api.ap-south-1.amazonaws.com/prod/create',
-                {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                  },
-                  body: JSON.stringify(postingPayload),
-                  mode: 'no-cors', // Use no-cors as a fallback
-                  signal: AbortSignal.timeout(1000000)
+            // Use a separate async function to ensure the fetch call is executed
+            const setupPostingSchedule = async () => {
+              try {
+                console.log('Starting fetch request to posting schedule API...');
+                
+                // Try with mode: 'cors' first (default)
+                try {
+                  const response = await fetch(
+                    'https://97m15gg62a.execute-api.ap-south-1.amazonaws.com/prod/create',
+                    {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                      },
+                      body: JSON.stringify(postingPayload),
+                      signal: AbortSignal.timeout(1000000)
+                    }
+                  );
+                  
+                  console.log('Received response from posting schedule API:', response);
+                  console.log('Response status:', response.status);
+                  console.log('Response ok:', response.ok);
+                  
+                  if (response.ok) {
+                    const responseText = await response.text();
+                    console.log('Posting schedule API response text:', responseText);
+                    
+                    // Try to parse the response as JSON if it's not empty
+                    let responseData;
+                    if (responseText.trim()) {
+                      try {
+                        responseData = JSON.parse(responseText);
+                        console.log('Posting schedule API call successful with parsed response:', responseData);
+                      } catch (parseError) {
+                        console.log('Could not parse response as JSON:', parseError);
+                        console.log('Raw response text was:', responseText);
+                      }
+                    } else {
+                      console.log('Posting schedule API returned empty response with status:', response.status);
+                    }
+                  } else {
+                    console.log('Posting schedule API call failed with status:', response.status);
+                    const errorText = await response.text();
+                    console.log('Error response text:', errorText);
+                    
+                    // Try to parse error response as JSON if possible
+                    try {
+                      const errorJson = JSON.parse(errorText);
+                      console.log('Parsed error response:', errorJson);
+                    } catch (e) {
+                      // If it's not JSON, the raw text is already logged
+                    }
+                  }
+                } catch (corsError) {
+                  console.log('CORS error detected, trying with proxy or alternative approach:', corsError);
+                  
+                  // Option 1: Try using a CORS proxy
+                  try {
+                    console.log('Attempting to use CORS proxy...');
+                    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
+                    const targetUrl = 'https://97m15gg62a.execute-api.ap-south-1.amazonaws.com/prod/create';
+                    
+                    const proxyResponse = await fetch(proxyUrl + targetUrl, {
+                      method: 'POST',
+                      headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'Origin': window.location.origin
+                      },
+                      body: JSON.stringify(postingPayload),
+                      signal: AbortSignal.timeout(1000000)
+                    });
+                    
+                    console.log('Proxy response:', proxyResponse);
+                    if (proxyResponse.ok) {
+                      const responseText = await proxyResponse.text();
+                      console.log('Proxy response text:', responseText);
+                    }
+                  } catch (proxyError) {
+                    console.log('Proxy approach failed:', proxyError);
+                    
+                    // Option 2: Log the payload for manual processing later
+                    console.log('Saving posting schedule details for manual setup:');
+                    console.log('Agent ID:', agentId);
+                    console.log('Posting interval:', postingInterval);
+                    console.log('Posting topics:', postingTopics);
+                    console.log('Full payload:', postingPayload);
+                    
+                    // Option 3: Store the request in localStorage for retry later
+                    try {
+                      const pendingRequests = JSON.parse(localStorage.getItem('pendingPostingSchedules') || '[]');
+                      pendingRequests.push({
+                        timestamp: new Date().toISOString(),
+                        agentId,
+                        payload: postingPayload
+                      });
+                      localStorage.setItem('pendingPostingSchedules', JSON.stringify(pendingRequests));
+                      console.log('Stored posting schedule request for later retry');
+                    } catch (storageError) {
+                      console.error('Failed to store request in localStorage:', storageError);
+                    }
+                  }
                 }
-              );
-              
-              console.log('Posting schedule API call completed');
-            } catch (fetchError) {
-              console.error('Network error when setting up posting schedule:', fetchError.message);
-              // This error is isolated and won't affect agent creation
-            }
+              } catch (fetchError) {
+                console.error('Network error when setting up posting schedule:', fetchError);
+                console.error('Error details:', fetchError.message);
+                console.error('Error stack:', fetchError.stack);
+              }
+            };
+            
+            // Execute the posting schedule setup
+            setupPostingSchedule().catch(error => {
+              console.error('Unhandled error in setupPostingSchedule:', error);
+            });
+            
+            console.log('Posting schedule setup initiated');
+            
           } catch (error) {
             console.error('Error preparing posting schedule payload:', error);
+            console.error('Error details:', error.message);
+            console.error('Error stack:', error.stack);
+            // Continue anyway since the agent was created successfully
           }
-        })();
+        } else {
+          console.log('Posting configuration is disabled. Skipping posting schedule setup.');
+          console.log('Posting clients:', postingClients);
+        }
+        
+        // Move to the success step
+        handleNext();
+      } else {
+        // If we don't have agent data but also no error, something unexpected happened
+        throw new Error('Agent creation failed: No agent data returned');
       }
-      
-      // Always proceed to the next step
-      handleNext();
     } catch (error) {
       console.error('Error creating agent:', error);
-      alert(`Failed to create agent: ${error.message || error}`);
+      alert(`Failed to create agent: ${error.message || 'Unknown error'}`);
     } finally {
       setIsCreating(false);
     }
