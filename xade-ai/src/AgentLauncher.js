@@ -41,6 +41,7 @@ const AgentLauncher = () => {
   const [setupX, setSetupX] = useState(false);
   const [postingClients, setPostingClients] = useState([]);
   const [postingInterval, setPostingInterval] = useState('60');
+  const [postingTopics, setPostingTopics] = useState('');
   const [chatClients, setChatClients] = useState([]);
   const [replyToUsernames, setReplyToUsernames] = useState('');
   const [replyToReplies, setReplyToReplies] = useState(false);
@@ -51,6 +52,10 @@ const AgentLauncher = () => {
   const [currentQuestion, setCurrentQuestion] = useState('');
   const [currentAnswer, setCurrentAnswer] = useState('');
   const [currentPost, setCurrentPost] = useState('');
+  const [twitterUsername, setTwitterUsername] = useState('');
+  const [twitterPassword, setTwitterPassword] = useState('');
+  const [twitterEmail, setTwitterEmail] = useState('');
+  const [twitter2FASecret, setTwitter2FASecret] = useState('');
 
   const characterOptions = [
     { value: 'presets', label: 'Presets' },
@@ -233,6 +238,7 @@ const AgentLauncher = () => {
       const postConfiguration = {
         clients: postingClients,
         interval: parseInt(postingInterval),
+        topics: postingTopics,
         enabled: postingClients.length > 0
       };
 
@@ -243,8 +249,19 @@ const AgentLauncher = () => {
         enabled: chatClients.length > 0
       };
 
+      // Prepare Twitter credentials if they exist
+      let twitter_credentials = null;
+      if (setupX && twitterUsername && twitterPassword && twitterEmail) {
+        twitter_credentials = JSON.stringify({
+          TWITTER_USERNAME: twitterUsername,
+          TWITTER_PASSWORD: twitterPassword,
+          TWITTER_EMAIL: twitterEmail,
+          TWITTER_2FA_SECRET: twitter2FASecret || ''
+        });
+      }
+
       // Insert agent data into agents2 table
-      const { error } = await supabase
+      const { data: agentData, error } = await supabase
         .from('agents2')
         .insert([
           {
@@ -261,13 +278,61 @@ const AgentLauncher = () => {
             })),
             sample_posts: postList,
             post_configuration: postConfiguration,
-            chat_configuration: chatConfiguration
+            chat_configuration: chatConfiguration,
+            twitter_credentials: twitter_credentials
           }
-        ]);
+        ])
+        .select();
 
       if (error) throw error;
 
       console.log('Agent created successfully');
+      
+      // Set up posting schedule if posting is enabled, but don't wait for it
+      if (postConfiguration.enabled && agentData && agentData.length > 0) {
+        const agentId = agentData[0].id;
+        
+        // Create the posting schedule in the background
+        // Don't await this - let it run independently
+        (async () => {
+          try {
+            const postingPayload = {
+              userId: agentId,
+              interval: parseInt(postingInterval),
+              query: `speak alternatively/randomly about ${postingTopics}`,
+              systemPrompt: `You are an ai agent who has to tweet about ${postingTopics} where you have to sound according to this character prompt ${prompt} and keep it under 260 characters pls`
+            };
+            
+            console.log('Sending posting schedule request with payload:', postingPayload);
+            
+            try {
+              // Try with no-cors mode as a fallback
+              const response = await fetch(
+                'https://97m15gg62a.execute-api.ap-south-1.amazonaws.com/prod/create',
+                {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                  },
+                  body: JSON.stringify(postingPayload),
+                  mode: 'no-cors', // Use no-cors as a fallback
+                  signal: AbortSignal.timeout(1000000)
+                }
+              );
+              
+              console.log('Posting schedule API call completed');
+            } catch (fetchError) {
+              console.error('Network error when setting up posting schedule:', fetchError.message);
+              // This error is isolated and won't affect agent creation
+            }
+          } catch (error) {
+            console.error('Error preparing posting schedule payload:', error);
+          }
+        })();
+      }
+      
+      // Always proceed to the next step
       handleNext();
     } catch (error) {
       console.error('Error creating agent:', error);
@@ -947,6 +1012,43 @@ const AgentLauncher = () => {
                       marginBottom: '20px'
                     }}
                   />
+                  
+                  <p style={{ marginBottom: '10px' }}>What should your agent post about?</p>
+                  <textarea
+                    value={postingTopics}
+                    onChange={(e) => setPostingTopics(e.target.value)}
+                    placeholder="Enter topics, themes, or specific content your agent should post about. Be as specific as possible."
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      minHeight: '100px',
+                      fontSize: '14px',
+                      marginBottom: '20px',
+                      resize: 'vertical'
+                    }}
+                  />
+                  
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      marginTop: '20px'
+                    }}
+                  >
+                    Continue
+                  </button>
                 </div>
               ) : slides[currentStep].hasChatConfig ? (
                 <div style={{ width: '90%' }}>
@@ -1050,32 +1152,108 @@ const AgentLauncher = () => {
               ) : slides[currentStep].hasXConfig ? (
                 <>
                   <p>{slides[currentStep].content}</p>
-                  <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                    <button 
-                      className="next-button"
-                      onClick={() => {
-                        setSetupX(true);
-                        handleNext();
-                      }}
-                      style={{ flex: 1 }}
-                    >
-                      Let's do this
-                    </button>
-                    <button 
-                      className="next-button"
-                      onClick={() => {
-                        setSetupX(false);
-                        handleNext();
-                      }}
-                      style={{ 
-                        flex: 1,
-                        backgroundColor: 'transparent',
-                        border: '1px solid white',
-                        color: '#FFF'
-                      }}
-                    >
-                      Maybe later
-                    </button>
+                  <div style={{ width: '90%' }}>
+                    <div style={{ marginBottom: '20px' }}>
+                      <p style={{ color: '#666', marginBottom: '8px' }}>Twitter Username</p>
+                      <input
+                        type="text"
+                        value={twitterUsername}
+                        onChange={(e) => setTwitterUsername(e.target.value)}
+                        placeholder="hmji236895"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: '#1a1a1a',
+                          border: 'none',
+                          borderRadius: '10px',
+                          color: 'white',
+                          height: '40px',
+                          fontSize: '14px',
+                          marginBottom: '16px'
+                        }}
+                      />
+                      <p style={{ color: '#666', marginBottom: '8px' }}>Twitter Email</p>
+                      <input
+                        type="email"
+                        value={twitterEmail}
+                        onChange={(e) => setTwitterEmail(e.target.value)}
+                        placeholder="gidag36361@lxheir.com"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: '#1a1a1a',
+                          border: 'none',
+                          borderRadius: '10px',
+                          color: 'white',
+                          height: '40px',
+                          fontSize: '14px',
+                          marginBottom: '16px'
+                        }}
+                      />
+                      <p style={{ color: '#666', marginBottom: '8px' }}>Twitter Password</p>
+                      <input
+                        type="password"
+                        value={twitterPassword}
+                        onChange={(e) => setTwitterPassword(e.target.value)}
+                        placeholder="Commune_dev1"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: '#1a1a1a',
+                          border: 'none',
+                          borderRadius: '10px',
+                          color: 'white',
+                          height: '40px',
+                          fontSize: '14px',
+                          marginBottom: '16px'
+                        }}
+                      />
+                      <p style={{ color: '#666', marginBottom: '8px' }}>Twitter 2FA Secret (if applicable)</p>
+                      <input
+                        type="text"
+                        value={twitter2FASecret}
+                        onChange={(e) => setTwitter2FASecret(e.target.value)}
+                        placeholder="DUEJRBRPZU3FSAM4"
+                        style={{
+                          width: '100%',
+                          padding: '12px',
+                          backgroundColor: '#1a1a1a',
+                          border: 'none',
+                          borderRadius: '10px',
+                          color: 'white',
+                          height: '40px',
+                          fontSize: '14px',
+                          marginBottom: '16px'
+                        }}
+                      />
+                    </div>
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
+                      <button 
+                        className="next-button"
+                        onClick={() => {
+                          setSetupX(true);
+                          handleNext();
+                        }}
+                        style={{ flex: 1 }}
+                      >
+                        Save and Continue
+                      </button>
+                      <button 
+                        className="next-button"
+                        onClick={() => {
+                          setSetupX(false);
+                          handleNext();
+                        }}
+                        style={{ 
+                          flex: 1,
+                          backgroundColor: 'transparent',
+                          border: '1px solid white',
+                          color: '#FFF'
+                        }}
+                      >
+                        Skip for now
+                      </button>
+                    </div>
                   </div>
                 </>
               ) : slides[currentStep].hasXLabel ? (
@@ -1290,7 +1468,8 @@ const AgentLauncher = () => {
                         <p style={{ color: '#666', marginBottom: '8px' }}>Posting Configuration:</p>
                         <p style={{ margin: 0 }}>
                           Clients: {postingClients.length > 0 ? postingClients.map(c => c === 'terminal' ? 'Xade Terminal' : 'X').join(', ') : 'None'}<br/>
-                          Interval: {postingInterval} minutes
+                          Interval: {postingInterval} minutes<br/>
+                          Topics: {postingTopics || 'Not specified'}
                         </p>
                       </div>
 
