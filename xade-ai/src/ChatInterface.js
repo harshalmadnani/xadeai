@@ -1375,149 +1375,14 @@ function ChatInterface({ selectedAgent }) {  // Add selectedAgent as a prop
   // Update the system prompt to include new functions
   const callOpenAIAPI = async (userInput) => {
     try {
-      const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
-          { 
-            role: "system",
-            content: `You are Xade AI's data fetcher. Your role is to identify and fetch the relevant data based on the user's question.
-              The user's wallet addresses are: ${portfolioAddresses.join(', ')}
-
-Available functions:
-- Market Data:
-  - price(token) - returns current price in USD
-  - volume(token) - returns 24h volume
-  - marketCap(token) - returns market cap
-  - marketCapDiluted(token) - returns fully diluted market cap
-  - liquidity(token) - returns liquidity
-  - liquidityChange24h(token) - returns 24h liquidity change %
-  - offChainVolume(token) - returns off-chain volume
-  - volume7d(token) - returns 7d volume
-  - volumeChange24h(token) - returns 24h volume change %
-  - isListed(token) - returns listing status
-  - priceChange24h(token) - returns 24h price change %
-  - priceChange1h(token) - returns 1h price change %
-  - priceChange7d(token) - returns 7d price change %
-  - priceChange1m(token) - returns 30d price change %
-  - priceChange1y(token) - returns 1y price change %
-  - ath(token) - returns all-time high price
-  - atl(token) - returns all-time low price
-  - rank(token) - returns market rank
-  - totalSupply(token) - returns total supply
-  - circulatingSupply(token) - returns circulating supply
-
-- Social/Info:
-  - website(token) - returns official website URL
-  - twitter(token) - returns Twitter handle
-  - telegram(token) - returns Telegram group link
-  - discord(token) - returns Discord server link
-  - description(token) - returns project description
-  - usePerplexity(query) - returns latest news and analysis using Perplexity AI
-
-- Historical Data:
-  - priceHistoryData(token, period) - returns array of {date, price} objects
-  - getHistoricPortfolioData(addresses, period) - returns {wallet, wallets, currentBalance, balanceHistory}
-  Periods can be "1d", "7d", "30d", "1y"
-- getPriceAtDateTime(token, timestamp) - returns price at specific date/time
-- getPriceGrowth(token, fromTimestamp, toTimestamp) - returns price growth between dates
-- getTechnicalAnalysis(token, period) - returns technical indicators and trend analysis
-- getPortfolioAtDateTime(addresses, timestamp) - returns portfolio value at specific date/time
-- getPortfolioTrends(addresses, period) - returns portfolio trend analysis
-- getPortfolioGrowth(addresses, fromTimestamp, toTimestamp) - returns portfolio growth between dates
-
-- Wallet Analysis:
-  - getWalletPortfolio(address) - returns detailed wallet information:
-    {
-      balance: total wallet balance in USD
-      realizedPNL: realized profit/loss
-      unrealizedPNL: unrealized profit/loss
-      assets: [{
-        name: token name
-        symbol: token symbol
-        balance: token amount
-        value: USD value
-      }]
-      pnlHistory: historical PNL data
-    }
-
-- Token Information:
-  - cexs(token) - returns exchange listing information:
-    {
-      totalListings: number,
-      exchanges: [{
-        name: string,
-        logo: string | null
-      }]
-    }
-  - investors(token) - returns detailed investor information:
-    {
-      totalInvestors: number,
-      leadInvestors: string[],
-      vcInvestors: number,
-      angelInvestors: number,
-      allInvestors: [{
-        name: string,
-        type: string,
-        isLead: boolean,
-        country: string,
-        image: string
-      }]
-    }
-  - distribution(token) - returns token distribution:
-    [{
-      category: string,
-      percentage: number
-    }]
-  - releaseSchedule(token) - returns token release schedule:
-    {
-      totalTokensInSchedule: number,
-      totalUnlockEvents: number,
-      upcomingUnlocks: array,
-      fullSchedule: [{
-        date: string,
-        tokensToUnlock: number,
-        allocation: object
-      }]
-    }
-Example format:
-\`\`\`javascript
-const data = {
-  currentPrice: await price("bitcoin"),
-  priceHistory: await priceHistoryData("bitcoin", "30d"),
-  walletData: await getWalletPortfolio("0x123..."),
-  news: await usePerplexity("latest bitcoin news and analysis")
-};
-return data;
-\`\`\`
-
-Instructions:
-1. Return only the raw data needed to answer the user's question
-2. Do not perform any calculations or analysis
-3. Format your response as JavaScript code that calls the necessary functions
-4. For historical data, always specify the period needed
-5. Always return the fetched data as a structured object
-6. For questions about token performance, price movement, or trading decisions, always include:
-   - Technical analysis (1d, 7d, and 30d periods)
-   - Recent price changes
-   - Latest news from Perplexity
-   - Market data (volume, liquidity, market cap)
-
-The user's custom investment thesis:
-Buy Strategy: ${customThesis.buyStrategy}
-Sell Strategy: ${customThesis.sellStrategy}
-Rating Calculation: ${customThesis.ratingCalculation}
-Risk Tolerance: ${customThesis.preferences.riskTolerance}
-
-When providing buy/sell ratings or analysis, incorporate the user's custom strategy and preferences.`
-          },
-          { role: "user", content: userInput }
-        ],
-        temperature: 0.7
+      const response = await axios.post('http://13.233.51.247:3004/api/analyze', {
+        query: userInput,
+        systemPrompt: `You are Xade AI's response agent where the user query was ${userInput} and you have to sound like a human and answer the question in a way that is helpful and informative. `
       });
 
-      return response.choices[0].message.content;
+      return response.data;
     } catch (error) {
-      console.error('Error calling OpenAI API:', error);
+      console.error('Error calling analyze API:', error);
       throw new Error('Failed to get AI response');
     }
   };
@@ -1538,46 +1403,10 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
     console.log('User input:', userInput);
 
     try {
-      const initialAiResponse = await callOpenAIAPI(userInput);
-      console.log('Initial response from GPT-4o-mini:', initialAiResponse);
+      const response = await callOpenAIAPI(userInput);
+      console.log('Response from analyze API:', response);
 
-      const processResponse = async (response) => {
-        const codeMatch = response.match(/```javascript\n([\s\S]*?)\n```/);
-        if (codeMatch && codeMatch[1]) {
-          const code = codeMatch[1];
-          const executionStartTime = Date.now();
-          let result;
-
-          result = await executeCode(codeMatch[1]);
-          const executionTime = Date.now() - executionStartTime;
-
-          console.log('Execution result:', result);
-
-          // Make call to OpenAI API instead of Groq
-          const finalResponse = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-              { 
-                role: "system", 
-                content: `You are ${selectedAgent ? selectedAgent.name : "Xade AI"}, a helpful AI assistant focused on cryptocurrency and blockchain topics.`
-              },
-              { 
-                role: "user", 
-                content: `You are answering this query: "${userInput}". The data from the execution is: ${result}`
-              }
-            ],
-            temperature: 0.7,
-            max_tokens: 3000
-          });
-
-          console.log('Final response from GPT-4o-mini:', finalResponse.choices[0].message.content);
-          return finalResponse.choices[0].message.content;
-        }
-        return response;
-      };
-
-      const processedResponse = await processResponse(initialAiResponse);
-      setMessages(prev => [...prev, { role: 'assistant', content: processedResponse }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: response.data.analysis}]);
 
       const endTime = Date.now();
       setResponseTime(endTime - startTime);
@@ -1725,6 +1554,11 @@ When providing buy/sell ratings or analysis, incorporate the user's custom strat
   // Modify the renderMessage function to include response time
   const renderMessage = (message, index) => {
     const formatContent = (content) => {
+      // Ensure content is a string
+      if (typeof content !== 'string') {
+        content = String(content);
+      }
+      
       // Replace URLs with clickable links
       content = content.replace(
         /(https?:\/\/[^\s]+)/g,
