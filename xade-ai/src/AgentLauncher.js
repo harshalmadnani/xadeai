@@ -43,7 +43,7 @@ const AgentLauncher = () => {
   const [postingInterval, setPostingInterval] = useState('60');
   const [postingTopics, setPostingTopics] = useState('');
   const [chatClients, setChatClients] = useState([]);
-  const [replyToUsernames, setReplyToUsernames] = useState('');
+  const [replyToUsernames, setReplyToUsernames] = useState([]);
   const [replyToReplies, setReplyToReplies] = useState(false);
   const [exampleQueries, setExampleQueries] = useState('');
   const [examplePosts, setExamplePosts] = useState('');
@@ -56,6 +56,7 @@ const AgentLauncher = () => {
   const [twitterPassword, setTwitterPassword] = useState('');
   const [twitterEmail, setTwitterEmail] = useState('');
   const [twitter2FASecret, setTwitter2FASecret] = useState('');
+  const [currentUsername, setCurrentUsername] = useState('');
 
   const characterOptions = [
     { value: 'presets', label: 'Presets' },
@@ -195,6 +196,18 @@ const AgentLauncher = () => {
     );
   };
 
+  const handleAddUsername = () => {
+    const username = currentUsername.trim().replace(/^@+/, '');
+    if (username && !replyToUsernames.includes(username)) {
+      setReplyToUsernames([...replyToUsernames, username]);
+      setCurrentUsername('');
+    }
+  };
+
+  const handleRemoveUsername = (usernameToRemove) => {
+    setReplyToUsernames(replyToUsernames.filter(username => username !== usernameToRemove));
+  };
+
   const handleCreateAgent = async () => {
     setIsCreating(true);
     try {
@@ -244,20 +257,26 @@ const AgentLauncher = () => {
 
       const chatConfiguration = {
         clients: chatClients,
-        reply_to_usernames: replyToUsernames.split(',').map(u => u.trim()).filter(u => u),
+        reply_to_usernames: replyToUsernames,
         reply_to_replies: replyToReplies,
         enabled: chatClients.length > 0
       };
 
       // Prepare Twitter credentials if they exist
       let twitter_credentials = null;
-      if (setupX && twitterUsername && twitterPassword && twitterEmail) {
-        twitter_credentials = JSON.stringify({
-          TWITTER_USERNAME: twitterUsername,
-          TWITTER_PASSWORD: twitterPassword,
-          TWITTER_EMAIL: twitterEmail,
-          TWITTER_2FA_SECRET: twitter2FASecret || ''
-        });
+      if (postingClients.includes('x') || chatClients.includes('x')) {
+        if (setupX && twitterUsername && twitterPassword && twitterEmail) {
+          twitter_credentials = 
+          `TWITTER_USERNAME=${twitterUsername.trim()}
+           TWITTER_PASSWORD=${twitterPassword}
+TWITTER_EMAIL=${twitterEmail.trim()}
+TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
+        } else {
+          // If X is selected as a client but credentials are not set up
+          alert('Please set up X credentials or remove X from the clients');
+          setIsCreating(false);
+          return;
+        }
       }
 
       // Insert agent data into agents2 table
@@ -279,7 +298,7 @@ const AgentLauncher = () => {
             sample_posts: postList,
             post_configuration: postConfiguration,
             chat_configuration: chatConfiguration,
-            twitter_credentials: twitter_credentials
+            twitter_credentials: twitter_credentials ? JSON.stringify(twitter_credentials) : null
           }
         ])
         .select();
@@ -299,140 +318,65 @@ const AgentLauncher = () => {
           console.log('Posting interval:', postingInterval);
           console.log('Posting topics:', postingTopics);
           
-          // Create the posting schedule
-          try {
-            const postingPayload = {
-              userId: agentId,
-              interval: parseInt(postingInterval),
-              query: `speak alternatively/randomly about ${postingTopics}`,
-              systemPrompt: `You are an ai agent who has to tweet about ${postingTopics} where you have to sound according to this character prompt ${prompt} and keep it under 260 characters pls`
-            };
+          // Format the topics and prompt to be more API-friendly
+          const sanitizedTopics = postingTopics.trim().replace(/\s+/g, ' ');
+          const sanitizedPrompt = prompt.trim().replace(/\s+/g, ' ');
+          
+          const postingPayload = {
+            userId: agentId,
+            interval: parseInt(postingInterval),
+            query: sanitizedTopics ? `speak about ${sanitizedTopics}` : 'speak about general topics',
+            systemPrompt: `You are an AI agent who tweets. ${sanitizedPrompt} Keep all tweets under 260 characters.`
+          };
+          
+          console.log('Sending posting schedule request with payload:', postingPayload);
+          
+          const response = await fetch(
+            'https://97m15gg62a.execute-api.ap-south-1.amazonaws.com/prod/create',
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+              },
+              body: JSON.stringify(postingPayload),
+              signal: AbortSignal.timeout(1000000)
+            }
+          );
+          
+          console.log('Received response from posting schedule API:', response);
+          console.log('Response status:', response.status);
+          console.log('Response ok:', response.ok);
+          
+          if (response.ok) {
+            const responseText = await response.text();
+            console.log('Posting schedule API response text:', responseText);
             
-            console.log('Sending posting schedule request with payload:', postingPayload);
-            
-            // Use a separate async function to ensure the fetch call is executed
-            const setupPostingSchedule = async () => {
+            // Try to parse the response as JSON if it's not empty
+            let responseData;
+            if (responseText.trim()) {
               try {
-                console.log('Starting fetch request to posting schedule API...');
-                
-                // Try with mode: 'cors' first (default)
-                try {
-                  const response = await fetch(
-                    'https://97m15gg62a.execute-api.ap-south-1.amazonaws.com/prod/create',
-                    {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                      },
-                      body: JSON.stringify(postingPayload),
-                      signal: AbortSignal.timeout(1000000)
-                    }
-                  );
-                  
-                  console.log('Received response from posting schedule API:', response);
-                  console.log('Response status:', response.status);
-                  console.log('Response ok:', response.ok);
-                  
-                  if (response.ok) {
-                    const responseText = await response.text();
-                    console.log('Posting schedule API response text:', responseText);
-                    
-                    // Try to parse the response as JSON if it's not empty
-                    let responseData;
-                    if (responseText.trim()) {
-                      try {
-                        responseData = JSON.parse(responseText);
-                        console.log('Posting schedule API call successful with parsed response:', responseData);
-                      } catch (parseError) {
-                        console.log('Could not parse response as JSON:', parseError);
-                        console.log('Raw response text was:', responseText);
-                      }
-                    } else {
-                      console.log('Posting schedule API returned empty response with status:', response.status);
-                    }
-                  } else {
-                    console.log('Posting schedule API call failed with status:', response.status);
-                    const errorText = await response.text();
-                    console.log('Error response text:', errorText);
-                    
-                    // Try to parse error response as JSON if possible
-                    try {
-                      const errorJson = JSON.parse(errorText);
-                      console.log('Parsed error response:', errorJson);
-                    } catch (e) {
-                      // If it's not JSON, the raw text is already logged
-                    }
-                  }
-                } catch (corsError) {
-                  console.log('CORS error detected, trying with proxy or alternative approach:', corsError);
-                  
-                  // Option 1: Try using a CORS proxy
-                  try {
-                    console.log('Attempting to use CORS proxy...');
-                    const proxyUrl = 'https://cors-anywhere.herokuapp.com/';
-                    const targetUrl = 'https://97m15gg62a.execute-api.ap-south-1.amazonaws.com/prod/create';
-                    
-                    const proxyResponse = await fetch(proxyUrl + targetUrl, {
-                      method: 'POST',
-                      headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json',
-                        'Origin': window.location.origin
-                      },
-                      body: JSON.stringify(postingPayload),
-                      signal: AbortSignal.timeout(1000000)
-                    });
-                    
-                    console.log('Proxy response:', proxyResponse);
-                    if (proxyResponse.ok) {
-                      const responseText = await proxyResponse.text();
-                      console.log('Proxy response text:', responseText);
-                    }
-                  } catch (proxyError) {
-                    console.log('Proxy approach failed:', proxyError);
-                    
-                    // Option 2: Log the payload for manual processing later
-                    console.log('Saving posting schedule details for manual setup:');
-                    console.log('Agent ID:', agentId);
-                    console.log('Posting interval:', postingInterval);
-                    console.log('Posting topics:', postingTopics);
-                    console.log('Full payload:', postingPayload);
-                    
-                    // Option 3: Store the request in localStorage for retry later
-                    try {
-                      const pendingRequests = JSON.parse(localStorage.getItem('pendingPostingSchedules') || '[]');
-                      pendingRequests.push({
-                        timestamp: new Date().toISOString(),
-                        agentId,
-                        payload: postingPayload
-                      });
-                      localStorage.setItem('pendingPostingSchedules', JSON.stringify(pendingRequests));
-                      console.log('Stored posting schedule request for later retry');
-                    } catch (storageError) {
-                      console.error('Failed to store request in localStorage:', storageError);
-                    }
-                  }
-                }
-              } catch (fetchError) {
-                console.error('Network error when setting up posting schedule:', fetchError);
-                console.error('Error details:', fetchError.message);
-                console.error('Error stack:', fetchError.stack);
+                responseData = JSON.parse(responseText);
+                console.log('Posting schedule API call successful with parsed response:', responseData);
+              } catch (parseError) {
+                console.log('Could not parse response as JSON:', parseError);
+                console.log('Raw response text was:', responseText);
               }
-            };
+            } else {
+              console.log('Posting schedule API returned empty response with status:', response.status);
+            }
+          } else {
+            console.log('Posting schedule API call failed with status:', response.status);
+            const errorText = await response.text();
+            console.log('Error response text:', errorText);
             
-            // Execute the posting schedule setup
-            setupPostingSchedule().catch(error => {
-              console.error('Unhandled error in setupPostingSchedule:', error);
-            });
-            
-            console.log('Posting schedule setup initiated');
-            
-          } catch (error) {
-            console.error('Error preparing posting schedule payload:', error);
-            console.error('Error details:', error.message);
-            console.error('Error stack:', error.stack);
-            // Continue anyway since the agent was created successfully
+            // Try to parse error response as JSON if possible
+            try {
+              const errorJson = JSON.parse(errorText);
+              console.log('Parsed error response:', errorJson);
+            } catch (e) {
+              // If it's not JSON, the raw text is already logged
+            }
           }
         } else {
           console.log('Posting configuration is disabled. Skipping posting schedule setup.');
@@ -1203,24 +1147,79 @@ const AgentLauncher = () => {
                     </button>
                   </div>
                   
-                  <p style={{ marginBottom: '10px' }}>Enter usernames of accounts whose tweets you want the agent to reply to:</p>
-                  <textarea
-                    value={replyToUsernames}
-                    onChange={(e) => setReplyToUsernames(e.target.value)}
-                    placeholder="@username1, @username2, @username3"
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      backgroundColor: '#1a1a1a',
-                      border: 'none',
-                      borderRadius: '10px',
-                      color: 'white',
-                      minHeight: '80px',
-                      fontSize: '14px',
-                      marginBottom: '20px',
-                      resize: 'vertical'
-                    }}
-                  />
+                  <div style={{ marginBottom: '20px' }}>
+                    <p style={{ marginBottom: '10px' }}>Enter usernames to reply to:</p>
+                    <div style={{ 
+                      display: 'flex',
+                      gap: '8px',
+                      marginBottom: '12px'
+                    }}>
+                      <input
+                        type="text"
+                        value={currentUsername}
+                        onChange={(e) => setCurrentUsername(e.target.value)}
+                        placeholder="Enter username without @"
+                        style={{
+                          flex: 1,
+                          padding: '12px',
+                          backgroundColor: '#1a1a1a',
+                          border: 'none',
+                          borderRadius: '10px',
+                          color: 'white',
+                          height: '40px',
+                          fontSize: '14px'
+                        }}
+                      />
+                      <button
+                        onClick={handleAddUsername}
+                        disabled={!currentUsername.trim()}
+                        style={{
+                          padding: '0 20px',
+                          backgroundColor: currentUsername.trim() ? 'white' : '#666',
+                          color: currentUsername.trim() ? 'black' : '#999',
+                          border: 'none',
+                          borderRadius: '10px',
+                          cursor: currentUsername.trim() ? 'pointer' : 'default'
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '8px'
+                    }}>
+                      {replyToUsernames.map((username, index) => (
+                        <div
+                          key={index}
+                          style={{
+                            backgroundColor: '#1a1a1a',
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}
+                        >
+                          <span>@{username}</span>
+                          <button
+                            onClick={() => handleRemoveUsername(username)}
+                            style={{
+                              backgroundColor: 'transparent',
+                              border: 'none',
+                              color: '#666',
+                              cursor: 'pointer',
+                              padding: '0',
+                              fontSize: '16px'
+                            }}
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                   
                   <div style={{
                     display: 'flex',
@@ -1588,7 +1587,7 @@ const AgentLauncher = () => {
                         <p style={{ color: '#666', marginBottom: '8px' }}>Chat Configuration:</p>
                         <p style={{ margin: 0 }}>
                           Clients: {chatClients.length > 0 ? chatClients.map(c => c === 'terminal' ? 'Xade Terminal' : 'X').join(', ') : 'None'}<br/>
-                          Reply to: {replyToUsernames || 'None'}<br/>
+                          Reply to: {replyToUsernames.map(username => `@${username}`).join(', ')}<br/>
                           Reply to replies and quotes: {replyToReplies ? 'Yes' : 'No'}
                         </p>
                       </div>

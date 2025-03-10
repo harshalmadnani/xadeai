@@ -29,8 +29,6 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [agents, setAgents] = useState([]);
-  const [hasNFT, setHasNFT] = useState(false);
-  const [checkingNFT, setCheckingNFT] = useState(true);
 
   useEffect(() => {
     const handleResize = () => {
@@ -63,48 +61,6 @@ function App() {
     if (authenticated && user) {
       const walletAddress = user.wallet?.address;
       console.log('User wallet address:', walletAddress);
-    }
-  }, [authenticated, user]);
-
-  useEffect(() => {
-    const checkNFTOwnership = async (walletAddress) => {
-      console.log('Starting NFT ownership check for wallet:', walletAddress);
-      try {
-        const response = await fetch(`https://production-api.mobula.io/api/1/wallet/nfts?wallet=${walletAddress}&chain=polygon`, {
-          method: 'GET'
-        });
-        const data = await response.json();
-        console.log('Mobula API response:', data);
-        
-        if (!data?.data) {
-          console.log('No NFT data found in response');
-          setHasNFT(false);
-          setCheckingNFT(false);
-          return;
-        }
-        
-        // Check if any NFT matches our target contract address
-        const targetContract = '0xa219462a1f7187b7d859e2985ab3936fd4cbec85';
-        console.log('Checking for NFTs from contract:', targetContract);
-        
-        const hasNFT = data.data.some(nft => {
-          const matches = nft?.token_address?.toLowerCase() === targetContract.toLowerCase();
-          console.log('Checking NFT contract:', nft?.token_address, 'Match:', matches);
-          return matches;
-        });
-        
-        console.log('Final NFT ownership status:', hasNFT);
-        setHasNFT(hasNFT);
-        setCheckingNFT(false);
-      } catch (error) {
-        console.error('Error checking NFT ownership:', error);
-        setCheckingNFT(false);
-        setHasNFT(false);
-      }
-    };
-
-    if (authenticated && user?.wallet?.address) {
-      checkNFTOwnership(user.wallet.address);
     }
   }, [authenticated, user]);
 
@@ -237,93 +193,6 @@ function App() {
   const handleAgentChange = (agent) => {
     setSelectedAgent(agent);
   };
-
-  // If authenticated but no NFT, show NFT required page
-  if (authenticated && !checkingNFT && !hasNFT) {
-    return (
-      <div className="App" style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: `url(https://res.cloudinary.com/dcrfpsiiq/image/upload/v1709897243/ie5mtdv4gacvnhdyguzm.png)`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        color: 'white',
-        padding: '20px',
-        textAlign: 'center',
-      }}>
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          maxWidth: '800px',
-          gap: '24px',
-          padding: '40px',
-          borderRadius: '20px',
-
-        }}>
-          <h1 style={{
-            fontSize: '48px',
-            fontWeight: '500',
-            marginBottom: '16px',
-          }}>
-            We are currently only open to<br />
-            Early Access NFT Holders
-          </h1>
-          <div style={{
-            display: 'flex',
-            gap: '16px'
-          }}>
-            <button 
-              onClick={() => window.open('https://www.crossmint.com/collections/xade-early-access-nfts/drop', '_blank')}
-              style={{
-                padding: '12px 24px',
-                backgroundColor: 'white',
-                color: 'black',
-                border: 'none',
-                borderRadius: '50px',
-                cursor: 'pointer',
-                fontSize: '16px',
-                fontWeight: '500',
-              }}>
-              Mint the NFT
-            </button>
-            <button style={{
-              padding: '12px 24px',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '50px',
-              cursor: 'pointer',
-              fontSize: '16px',
-              fontWeight: '500',
-            }}
-            onClick={() => window.open('https://t.me/xadeofficial', '_blank')}
-            >
-              Join the community
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // If still checking NFT status, show loading
-  if (authenticated && checkingNFT) {
-    return (
-      <div className="App" style={{
-        display: 'flex',
-        justifyContent: 'center',
-        alignItems: 'center',
-        height: '100vh',
-        background: '#000000',
-        color: 'white',
-      }}>
-        <div>Checking NFT ownership...</div>
-      </div>
-    );
-  }
 
   // If Privy is not ready or user is not authenticated, show login page
   if (!ready || !authenticated) {
