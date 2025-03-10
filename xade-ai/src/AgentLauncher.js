@@ -211,6 +211,13 @@ const AgentLauncher = () => {
   const handleCreateAgent = async () => {
     setIsCreating(true);
     try {
+      // Validate posting interval
+      if (postingInterval && parseInt(postingInterval) < 2) {
+        alert('Posting interval must be at least 2 minutes');
+        setIsCreating(false);
+        return;
+      }
+
       // Check if bucket exists, if not create it
       const { error: bucketError } = await supabase
         .storage
@@ -1053,7 +1060,7 @@ TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
                     type="number"
                     value={postingInterval}
                     onChange={(e) => setPostingInterval(e.target.value)}
-                    min="1"
+                    min="2"
                     placeholder="60"
                     style={{
                       width: '100%',

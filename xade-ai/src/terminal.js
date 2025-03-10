@@ -95,7 +95,7 @@ function Terminal({ selectedAgent }) {
 
     const { data: agentsData, error: agentsError } = await supabase
       .from('terminal2')
-      .select('agent_id, tweet_content')
+      .select('agent_id, tweet_content, created_at')
       .eq('agent_id', selectedAgent)
       .order('created_at', { ascending: false });
 
@@ -108,7 +108,8 @@ function Terminal({ selectedAgent }) {
       const messages = agentsData.map(item => ({
         type: 'output',
         agentId: item.agent_id,
-        content: item.tweet_content
+        content: item.tweet_content,
+        timestamp: new Date(item.created_at)
       }));
       setAgentTweets(messages);
       setHistory(messages);
@@ -148,6 +149,11 @@ function Terminal({ selectedAgent }) {
               {entry.type === 'input' ? '> ' : `${agentNames[entry.agentId] || `Agent ${entry.agentId}`}: `}
             </span>
             {entry.content}
+            {entry.timestamp && (
+              <span style={{ color: '#666', marginLeft: '10px', fontSize: '12px' }}>
+                {entry.timestamp.toLocaleString()}
+              </span>
+            )}
           </div>
         ))}
       </div>

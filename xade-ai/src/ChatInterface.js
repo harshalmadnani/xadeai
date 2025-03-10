@@ -21,7 +21,7 @@ import CodeIcon from '@mui/icons-material/Code';
 import Terminal from './terminal';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { supabase } from './lib/supabase';
+import { createClient } from '@supabase/supabase-js';
 // Create a context for storing fetched data
 const DataContext = createContext(null);
 
@@ -38,6 +38,10 @@ const groq = new Groq({
   apiKey: process.env.REACT_APP_GROQ_API_KEY,
   dangerouslyAllowBrowser: true 
 });
+
+const supabaseUrl = 'https://wbsnlpviggcnwqfyfobh.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indic25scHZpZ2djbndxZnlmb2JoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODc2NTcwNiwiZXhwIjoyMDU0MzQxNzA2fQ.tr6PqbiAXQYSQSpG2wS6I4DZfV1Gc3dLXYhKwBrJLS0';
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 // Create a new component for the UI
 const ChatInterfaceUI = ({
@@ -1377,7 +1381,7 @@ function ChatInterface({ selectedAgent }) {  // Add selectedAgent as a prop
     try {
       const response = await axios.post('http://13.233.51.247:3004/api/analyze', {
         query: userInput,
-        systemPrompt: `You are Xade AI's response agent where the user query was ${userInput} and you have to sound like a human and answer the question in a way that is helpful and informative. `
+        systemPrompt: `You are Xade AI's response agent where the user query was ${userInput} and your character prompt is ${agentPrompt}`
       });
 
       return response.data;
@@ -1406,12 +1410,21 @@ function ChatInterface({ selectedAgent }) {  // Add selectedAgent as a prop
       const response = await callOpenAIAPI(userInput);
       console.log('Response from analyze API:', response);
 
-      setMessages(prev => [...prev, { role: 'assistant', content: response.data.analysis}]);
+      // Check if response exists and has the expected structure
+      if (response?.success && response?.data?.analysis) {
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: response.data.analysis
+        }]);
+      } else {
+        throw new Error('Invalid response format from API');
+      }
 
       const endTime = Date.now();
       setResponseTime(endTime - startTime);
 
     } catch (error) {
+      console.error('Error in handleSubmit:', error);
       setError(error.message);
       setErrorSnackbar({ open: true, message: error.message });
     } finally {
@@ -2295,6 +2308,36 @@ function ChatInterface({ selectedAgent }) {  // Add selectedAgent as a prop
   const handleCloseSettings = () => {
     setIsSettingsOpen(false);
   };
+
+  const [agentPrompt, setAgentPrompt] = useState('');
+
+  // Add this useEffect after other useEffects
+  useEffect(() => {
+    const fetchAgentPrompt = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('agents2')
+          .select('prompt')
+          .eq('id', selectedAgent)
+          .single();
+        
+        if (error) throw error;
+        if (data) {
+          setAgentPrompt(data.prompt);
+        }
+      } catch (error) {
+        console.error('Error fetching agent prompt:', error);
+        setErrorSnackbar({
+          open: true,
+          message: 'Failed to fetch agent prompt'
+        });
+      }
+    };
+
+    if (selectedAgent) {
+      fetchAgentPrompt();
+    }
+  }, [selectedAgent]);
 
   return (
     <ChatInterfaceUI
