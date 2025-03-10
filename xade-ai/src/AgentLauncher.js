@@ -1155,7 +1155,7 @@ TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
                   </div>
                   
                   <div style={{ marginBottom: '20px' }}>
-                    <p style={{ marginBottom: '10px' }}>Enter usernames to reply to:</p>
+                    <p style={{ marginBottom: '10px' }}>Enter usernames to reply to and join their spaces:</p>
                     <div style={{ 
                       display: 'flex',
                       gap: '8px',
@@ -1276,7 +1276,7 @@ TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
                         type="text"
                         value={twitterUsername}
                         onChange={(e) => setTwitterUsername(e.target.value)}
-                        placeholder="hmji236895"
+                        placeholder="@username"
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1294,7 +1294,7 @@ TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
                         type="email"
                         value={twitterEmail}
                         onChange={(e) => setTwitterEmail(e.target.value)}
-                        placeholder="gidag36361@lxheir.com"
+                        placeholder="email@example.com"
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1312,7 +1312,7 @@ TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
                         type="password"
                         value={twitterPassword}
                         onChange={(e) => setTwitterPassword(e.target.value)}
-                        placeholder="Commune_dev1"
+                        placeholder="Enter your password"
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1330,7 +1330,7 @@ TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
                         type="text"
                         value={twitter2FASecret}
                         onChange={(e) => setTwitter2FASecret(e.target.value)}
-                        placeholder="DUEJRBRPZU3FSAM4"
+                        placeholder="Enter your 2FA secret"
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1747,6 +1747,8 @@ TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
                             currentStep === 6 ||
                             currentStep === 7 ||
                             currentStep === 8 ||
+                            currentStep === 9 ||
+                            currentStep === 4 ||
                             slides[currentStep].hasReview ||
                             slides[currentStep].hasXDetails) ? 'none' : 'block'
                   }}
