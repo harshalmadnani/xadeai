@@ -1636,7 +1636,7 @@ const AgentLauncher = () => {
                           <div style={loadingAnimation} />
                         </>
                       ) : (
-                        `Create ${agentName || 'Agent'}`
+                        `Start your 7 day free trial`
                       )}
                     </button>
 
