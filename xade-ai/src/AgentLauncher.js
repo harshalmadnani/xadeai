@@ -57,6 +57,7 @@ const AgentLauncher = () => {
   const [twitterEmail, setTwitterEmail] = useState('');
   const [twitter2FASecret, setTwitter2FASecret] = useState('');
   const [currentUsername, setCurrentUsername] = useState('');
+  const [selectedModel, setSelectedModel] = useState('gpt-4o');
 
   const characterOptions = [
     { value: 'presets', label: 'Presets' },
@@ -102,11 +103,18 @@ const AgentLauncher = () => {
       content: 'You can search for actions and sources',
       hasDataSources: true 
     },
+    
     { 
       image: '/picture4.png', 
       title: `How do you want ${agentName || 'your agent'} to sound?`, 
       content: 'Enter the prompt',
       hasPrompt: true 
+    },
+    {
+      image: '/picture4.png',
+      title: 'Choose the Language Model',
+      content: 'Select which LLM you want to power your agent',
+      hasModelSelection: true
     },
     {
       image: '/picture4.png',
@@ -287,7 +295,7 @@ const AgentLauncher = () => {
         }
       }
 
-      // Insert agent data into agents2 table
+      // Insert agent data into agents2 table with model
       const { data: agentData, error } = await supabase
         .from('agents2')
         .insert([
@@ -306,7 +314,8 @@ const AgentLauncher = () => {
             sample_posts: postList,
             post_configuration: postConfiguration,
             chat_configuration: chatConfiguration,
-            twitter_credentials: twitter_credentials ? JSON.stringify(twitter_credentials) : null
+            twitter_credentials: twitter_credentials ? JSON.stringify(twitter_credentials) : null,
+            model: selectedModel
           }
         ])
         .select();
@@ -1723,6 +1732,47 @@ const AgentLauncher = () => {
                       <p style={{ margin: 0, textAlign: 'center' }}>Chat and Interact</p>
                     </div>
                   </div>
+                </div>
+              ) : slides[currentStep].hasModelSelection ? (
+                <div style={{ width: '90%' }}>
+                  <p>{slides[currentStep].content}</p>
+                  <select
+                    value={selectedModel}
+                    onChange={(e) => setSelectedModel(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: '#1a1a1a',
+                      border: 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      height: '48px',
+                      fontSize: '14px',
+                      marginBottom: '20px',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="io-net">IO-NET</option>
+                  </select>
+                  
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      marginTop: '20px'
+                    }}
+                  >
+                    Continue
+                  </button>
                 </div>
               ) : (
                 <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
