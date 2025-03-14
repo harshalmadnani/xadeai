@@ -273,11 +273,12 @@ const AgentLauncher = () => {
       let twitter_credentials = null;
       if (postingClients.includes('x') || chatClients.includes('x')) {
         if (setupX && twitterUsername && twitterPassword && twitterEmail) {
-          twitter_credentials = 
-          `TWITTER_USERNAME=${twitterUsername.trim()}
-           TWITTER_PASSWORD=${twitterPassword}
-TWITTER_EMAIL=${twitterEmail.trim()}
-TWITTER_2FA_SECRET=${twitter2FASecret.trim()}`
+          twitter_credentials = {
+            'TWITTER_USERNAME=': twitterUsername.trim(),
+            'TWITTER_PASSWORD=': twitterPassword,
+            'TWITTER_EMAIL=': twitterEmail.trim(),
+            'TWITTER_2FA_SECRET=': twitter2FASecret.trim()
+          };
         } else {
           // If X is selected as a client but credentials are not set up
           alert('Please set up X credentials or remove X from the clients');
