@@ -1753,7 +1753,7 @@ const AgentLauncher = () => {
                     }}
                   >
                     <option value="gpt-4o">GPT-4o</option>
-                    <option value="io-net">IO-NET</option>
+                    <option value="io-net">Llama-3.3-70B-Instruct by io-net</option>
                   </select>
                   
                   <button 
