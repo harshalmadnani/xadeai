@@ -77,6 +77,8 @@ const ChatInterfaceUI = ({
   isSettingsOpen,
   handleOpenSettings,
   handleCloseSettings,
+  selectedAgentName, // Add this prop
+  agentDescription, // Add this prop
 }) => (
   <div style={{
     ...styles.chatInterface,
@@ -95,11 +97,11 @@ const ChatInterfaceUI = ({
       <div style={styles.messageList} ref={messageListRef}>
         {messages.length === 0 ? (
           <div style={styles.welcomeMessage}>
-            <Typography variant="h5" style={{ color: 'white', marginBottom: '20px', fontSize: '18px' }}>
-              Welcome to Xade AI! 👋
+            <Typography variant="h5" style={{ color: 'white', marginBottom: '20px', fontSize: '24px' }}>
+            Welcome to {selectedAgentName || 'Xade'}! 👋
             </Typography>
-            <Typography style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '30px', fontSize: '14px' }}>
-              I can help you with:
+            <Typography style={{ color: 'rgba(255, 255, 255, 0.7)', marginBottom: '30px', fontSize: '16px' }}>
+              {agentDescription || 'I am here to help'}
             </Typography>
             <div style={{
               display: 'grid',
@@ -110,30 +112,7 @@ const ChatInterfaceUI = ({
               margin: '0 auto'
             }}>
               {[
-                {
-                  question: "Price of Ethereum with the marketcap of Bitcoin?",
-                  icon: "💰"
-                },
-                {
-                  question: "Aptos Investors?",
-                  icon: "🔍"
-                },
-                {
-                  question: "Solana 7d technical Analysis?",
-                  icon: "📊"
-                },
-                {
-                  question: "What is EigenLayer?",
-                  icon: "ℹ️"
-                },
-                {
-                  question: "Latest news about Ethereum?",
-                  icon: "📰"
-                },
-                {
-                  question: "SUI token distribution?",
-                  icon: "📈"
-                }
+                // Sample questions removed
               ].map((suggestion, index) => (
                 <Button
                   key={index}
@@ -2311,31 +2290,39 @@ function ChatInterface({ selectedAgent }) {  // Add selectedAgent as a prop
 
   const [agentPrompt, setAgentPrompt] = useState('');
 
-  // Add this useEffect after other useEffects
+  // Add new state for agent name
+  const [selectedAgentName, setSelectedAgentName] = useState('');
+
+  // Add new state for agent description
+  const [agentDescription, setAgentDescription] = useState('');
+
+  // Modify the existing useEffect that fetches agent details
   useEffect(() => {
-    const fetchAgentPrompt = async () => {
+    const fetchAgentDetails = async () => {
       try {
         const { data, error } = await supabase
           .from('agents2')
-          .select('prompt')
+          .select('prompt, name, description')  // Add description to the selection
           .eq('id', selectedAgent)
           .single();
         
         if (error) throw error;
         if (data) {
           setAgentPrompt(data.prompt);
+          setSelectedAgentName(data.name);
+          setAgentDescription(data.description);  // Set the agent description
         }
       } catch (error) {
-        console.error('Error fetching agent prompt:', error);
+        console.error('Error fetching agent details:', error);
         setErrorSnackbar({
           open: true,
-          message: 'Failed to fetch agent prompt'
+          message: 'Failed to fetch agent details'
         });
       }
     };
 
     if (selectedAgent) {
-      fetchAgentPrompt();
+      fetchAgentDetails();
     }
   }, [selectedAgent]);
 
@@ -2372,6 +2359,8 @@ function ChatInterface({ selectedAgent }) {  // Add selectedAgent as a prop
       isSettingsOpen={isSettingsOpen}
       handleOpenSettings={handleOpenSettings}
       handleCloseSettings={handleCloseSettings}
+      selectedAgentName={selectedAgentName} // Add this prop
+      agentDescription={agentDescription} // Add this prop
     />
   );
 }

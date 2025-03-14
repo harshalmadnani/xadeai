@@ -428,7 +428,7 @@ function App() {
             width: '100%'
           }}>
             {selectedTab === 0 ? (
-              <ChatInterface selectedAgent={selectedAgent} />
+              <ChatInterface selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
             ) : selectedTab === 1 ? (
               <Terminal selectedAgent={selectedAgent} />
             ) : selectedTab === 2 ? (
