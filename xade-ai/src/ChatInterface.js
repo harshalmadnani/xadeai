@@ -21,6 +21,7 @@ import Terminal from './terminal';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import SettingsIcon from '@mui/icons-material/Settings';
 import { createClient } from '@supabase/supabase-js';
+import OpenAI from "openai";
 // Create a context for storing fetched data
 const DataContext = createContext(null);
 
