@@ -66,76 +66,76 @@ const AgentLauncher = () => {
   ];
 
   const slides = [
-    { image: '/picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
+    { image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture.png', title: 'Create your own\nAI-agent in a few clicks', content: 'Launch and scale your AI-Agents with unprecedented ease and speed' },
     { 
-      image: '/picture2.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture2.png', 
       title: 'It all starts with a name', 
       content: 'How should we call your Agent?',
       hasForm: true 
     },
     { 
-      image: '/picture3.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture3.png', 
       title: `Let's upload the picture\nof ${agentName || 'your agent'}`, 
       content: '',
       hasUpload: true 
     },
     { 
-      image: '/picture7.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture7.png', 
       title: `What kind of activity do you want\n${agentName || 'your agent'} to do?`, 
       content: '',
       hasActivities: true 
     },
     { 
-      image: '/picture10.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture10.png', 
       title: `Posting Configuration`, 
       content: 'Configure how your agent will post content',
       hasPostingConfig: true 
     },
     { 
-      image: '/picture11.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture12.png', 
       title: `Chat and Interaction Configuration`, 
       content: 'Configure how your agent will interact with others',
       hasChatConfig: true 
     },
     { 
-      image: '/picture5.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture5.png', 
       title: `What data sources do you want\n${agentName || 'your agent'} to use?`, 
       content: 'You can search for actions and sources',
       hasDataSources: true 
     },
     
     { 
-      image: '/picture4.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture4.png', 
       title: `How do you want ${agentName || 'your agent'} to sound?`, 
       content: 'Enter the prompt',
       hasPrompt: true 
     },
     {
-      image: '/picture4.png',
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture4.png',
       title: 'Choose the Language Model',
       content: 'Select which LLM you want to power your agent',
       hasModelSelection: true
     },
     {
-      image: '/picture4.png',
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture11.png',
       title: `Let's see some examples from ${agentName || 'your agent'}`,
       content: 'Add example interactions and posts',
       hasExamples: true
     },
     { 
-      image: '/picture6.png', 
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture6.png', 
       title: `Would you like to\nconfigure X account\nfor ${agentName || 'your agent'} now?`, 
       content: '',
       hasXConfig: true 
     },
     {
-      image: '/picture10.png',
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture10.png',
       title: 'Review',
       content: '',
       hasReview: true
     },
     {
-      image: '/picture11.png',
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture11.png',
       title: `${agentName || 'Your agent'} is live`,
       content: 'Congratulations, you\'ve just created a new agent!',
       hasSuccess: true
@@ -1697,7 +1697,7 @@ const AgentLauncher = () => {
                       }}
                     >
                       <img 
-                        src="/picture8.png" 
+                        src="https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture8.png" 
                         alt="Post sentiently"
                         style={{
                           width: '100%',
@@ -1720,7 +1720,7 @@ const AgentLauncher = () => {
                       }}
                     >
                       <img 
-                        src="/picture9.png" 
+                        src="https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture9.png" 
                         alt="Chat and Interact"
                         style={{
                           width: '100%',
