@@ -342,8 +342,8 @@ const AgentLauncher = () => {
           const postingPayload = {
             userId: agentId,
             interval: parseInt(postingInterval),
-            query: sanitizedTopics ? `speak about ${sanitizedTopics}` : 'speak about general topics',
-            systemPrompt: `You are an AI agent who tweets. ${sanitizedPrompt} Keep all tweets under 260 characters.`
+            query: sanitizedTopics ? `speak about ${sanitizedTopics} while you have access to access to these data sources: ${selectedSources.join(', ')}` : 'speak about general topics',
+            systemPrompt: `You are an AI agent who tweets. ${sanitizedPrompt} Keep all tweets under 260 characters. Here are some example posts to guide your style and tone:\n${postList.map(post => `- "${post}"`).join('\n')}`
           };
           
           console.log('Sending posting schedule request with payload:', postingPayload);
@@ -1099,10 +1099,78 @@ const AgentLauncher = () => {
                       color: 'white',
                       minHeight: '100px',
                       fontSize: '14px',
-                      marginBottom: '20px',
+                      marginBottom: '8px',
                       resize: 'vertical'
                     }}
                   />
+                  <div style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '8px',
+                    marginBottom: '20px'
+                  }}>
+                    <button 
+                      onClick={async () => {
+                        if (!postingTopics.trim()) return;
+                        
+                        try {
+                          const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                            method: 'POST',
+                            headers: {
+                              'Authorization': `Bearer ${process.env.REACT_APP_GROQ_API_KEY}`,
+                              'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                              model: 'mixtral-8x7b-32768',
+                              messages: [
+                                {
+                                  role: 'system',
+                                  content: 'You are an expert at improving AI agent posting topics. Make the topics more specific, detailed, and effective while maintaining the original intent.'
+                                },
+                                {
+                                  role: 'user',
+                                  content: `Please improve these posting topics: ${postingTopics}`
+                                }
+                              ],
+                              temperature: 0.7,
+                              max_tokens: 1024
+                            })
+                          });
+
+                          if (!response.ok) {
+                            throw new Error('Failed to improve posting topics');
+                          }
+
+                          const data = await response.json();
+                          const improvedTopics = data.choices[0].message.content;
+                          setPostingTopics(improvedTopics);
+                        } catch (error) {
+                          console.error('Error improving posting topics:', error);
+                        }
+                      }}
+                      disabled={!postingTopics.trim()}
+                      style={{ 
+                        cursor: postingTopics.trim() ? 'pointer' : 'default',
+                        backgroundColor: postingTopics.trim() ? 'white' : '#1a1a1a',
+                        padding: '8px 16px',
+                        borderRadius: '20px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        border: 'none',
+                        color: postingTopics.trim() ? '#000' : '#666',
+                        fontSize: '14px',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      <img src="/pen-loading.png" alt="Improve" style={{ 
+                        width: '16px', 
+                        height: '16px',
+                        filter: postingTopics.trim() ? 'invert(1)' : 'none'
+                      }} />
+                      Improve Topics
+                    </button>
+                  </div>
                   
                   <button 
                     className="next-button"

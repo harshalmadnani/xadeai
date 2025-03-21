@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, createContext, useContext } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
@@ -17,7 +17,12 @@ import Agentboard from './agentboard';
 import profile from './profile';
 import DashboardIcon from '@mui/icons-material/Leaderboard';
 import PersonIcon from '@mui/icons-material/Person';
+import EditIcon from '@mui/icons-material/Edit';
+import EditAgent from './editagent';
 import { supabase } from './lib/supabase';
+
+// Create a context for the wallet address
+export const WalletContext = createContext(null);
 
 function App() {
   const { ready, authenticated, login, user } = usePrivy();
@@ -29,6 +34,7 @@ function App() {
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [agents, setAgents] = useState([]);
+  const [walletAddress, setWalletAddress] = useState(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -59,13 +65,14 @@ function App() {
 
   useEffect(() => {
     if (authenticated && user) {
-      const walletAddress = user.wallet?.address;
-      console.log('User wallet address:', walletAddress);
+      const userWalletAddress = user.wallet?.address;
+      setWalletAddress(userWalletAddress);
+      console.log('User wallet address:', userWalletAddress);
     }
   }, [authenticated, user]);
 
   const getTabName = (index) => {
-    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board'];
+    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board', 'Edit Agent'];
     return tabs[index] || '';
   };
 
@@ -77,8 +84,8 @@ function App() {
     const tabName = getTabName(selectedTab).toLowerCase().replace(/\s+/g, '-');
     let agentParam = '';
     
-    // Only add agent parameter for Chat and Terminal tabs
-    if (selectedTab === 0 || selectedTab === 1) {
+    // Only add agent parameter for Chat, Terminal, and Edit Agent tabs
+    if (selectedTab === 0 || selectedTab === 1 || selectedTab === 4) {
       if (selectedAgent && selectedAgentName) {
         const formattedAgentName = selectedAgentName.toLowerCase().replace(/\s+/g, '-');
         agentParam = `/${formattedAgentName}`;
@@ -91,15 +98,15 @@ function App() {
   // Update URL parsing logic
   useEffect(() => {
     const pathParts = location.pathname.slice(1).split('/');
-    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board'];
+    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board', 'edit-agent'];
     const tabIndex = tabs.indexOf(pathParts[0]);
     
     if (tabIndex !== -1) {
       setSelectedTab(tabIndex);
     }
 
-    // Only set agent name for Chat and Terminal tabs
-    if (pathParts[1] && (tabIndex === 0 || tabIndex === 1)) {
+    // Only set agent name for Chat, Terminal, and Edit Agent tabs
+    if (pathParts[1] && (tabIndex === 0 || tabIndex === 1 || tabIndex === 4)) {
       const agentName = pathParts[1];
       setSelectedAgentName(agentName.toUpperCase());
     }
@@ -178,6 +185,19 @@ function App() {
         label="Agent Board"
         iconPosition="start"
         aria-label="agent-board"
+        sx={{ 
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            color: 'white',
+          }
+        }}
+      />
+      <Tab 
+        icon={<EditIcon sx={{ fontSize: 24 }} />}
+        label="Edit Agent"
+        iconPosition="start"
+        aria-label="edit-agent"
         sx={{ 
           '&:hover': {
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -324,123 +344,130 @@ function App() {
   }
 
   return (
-    <div className="App">
-      <div style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
-        width: '100%',
-      }}>
+    <WalletContext.Provider value={{ walletAddress }}>
+      <div className="App">
         <div style={{
-          height: '60px',
-          backgroundColor: 'rgba(0, 0, 0, 0.4)',
-          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
           display: 'flex',
-          alignItems: 'center',
-          padding: '0 16px',
-          zIndex: 1000,
+          flexDirection: 'column',
+          height: '100%',
+          background: 'linear-gradient(180deg, #000000 0%, #1a1a1a 100%)',
+          width: '100%',
         }}>
-          <IconButton
-            onClick={() => setSidebarVisible(!sidebarVisible)}
-            sx={{ color: 'white' }}
-          >
-            <MenuIcon />
-          </IconButton>
-          {selectedTab !== 2 && selectedTab !== 3 && (
-            <AgentDropdown 
-              onAgentSelect={(id, name) => {
-                setSelectedAgent(id);
-                setSelectedAgentName(name);
-              }} 
-              defaultAgent={1}
-            />
-          )}
-        </div>
+          <div style={{
+            height: '60px',
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            padding: '0 16px',
+            zIndex: 1000,
+          }}>
+            <IconButton
+              onClick={() => setSidebarVisible(!sidebarVisible)}
+              sx={{ color: 'white' }}
+            >
+              <MenuIcon />
+            </IconButton>
+            {selectedTab !== 2 && selectedTab !== 3 && (
+              <AgentDropdown 
+                onAgentSelect={(id, name) => {
+                  setSelectedAgent(id);
+                  setSelectedAgentName(name);
+                }} 
+                defaultAgent={1}
+              />
+            )}
+          </div>
 
-        <div style={{
-          display: 'flex',
-          flex: 1,
-          height: 'calc(100vh - 60px)',
-          position: 'relative',
-        }}>
-          {sidebarVisible && (
-            <>
-              <div
-                onClick={() => setSidebarVisible(false)}
-                style={{
+          <div style={{
+            display: 'flex',
+            flex: 1,
+            height: 'calc(100vh - 60px)',
+            position: 'relative',
+          }}>
+            {sidebarVisible && (
+              <>
+                <div
+                  onClick={() => setSidebarVisible(false)}
+                  style={{
+                    position: 'fixed',
+                    top: '60px',
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    zIndex: 100,
+                  }}
+                />
+                <div style={{
                   position: 'fixed',
                   top: '60px',
                   left: 0,
-                  right: 0,
                   bottom: 0,
-                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                  zIndex: 100,
-                }}
-              />
-              <div style={{
-                position: 'fixed',
-                top: '60px',
-                left: 0,
-                bottom: 0,
-                width: isMobile ? '100%' : '250px',
-                backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                borderRight: '1px solid rgba(255, 255, 255, 0.1)',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                padding: '20px 0',
-                zIndex: 1000,
-                boxShadow: '4px 0 15px rgba(0, 0, 0, 0.3)',
-                transition: 'all 0.3s ease',
-              }}>
-                <div style={{
+                  width: isMobile ? '100%' : '250px',
+                  backgroundColor: 'rgba(0, 0, 0, 0.9)',
+                  borderRight: '1px solid rgba(255, 255, 255, 0.1)',
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  width: '100%',
+                  padding: '20px 0',
+                  zIndex: 1000,
+                  boxShadow: '4px 0 15px rgba(0, 0, 0, 0.3)',
+                  transition: 'all 0.3s ease',
                 }}>
-                  <NavigationTabs />
-                  <IconButton
-                    onClick={() => setSidebarVisible(false)}
-                    sx={{ 
-                      color: 'rgba(255, 255, 255, 0.5)',
-                      marginTop: 'auto',
-                      '&:hover': {
-                        color: 'white',
-                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
-                      }
-                    }}
-                  >
-                   
-                  </IconButton>
+                  <div style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    width: '100%',
+                  }}>
+                    <NavigationTabs />
+                    <IconButton
+                      onClick={() => setSidebarVisible(false)}
+                      sx={{ 
+                        color: 'rgba(255, 255, 255, 0.5)',
+                        marginTop: 'auto',
+                        '&:hover': {
+                          color: 'white',
+                          backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                        }
+                      }}
+                    >
+                     
+                    </IconButton>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
-
-          <div style={{ 
-            flex: 1, 
-            display: 'flex', 
-            flexDirection: 'column',
-            position: 'relative',
-            minWidth: 0,
-            width: '100%'
-          }}>
-            {selectedTab === 0 ? (
-              <ChatInterface selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
-            ) : selectedTab === 1 ? (
-              <Terminal selectedAgent={selectedAgent} />
-            ) : selectedTab === 2 ? (
-              <AgentLauncher />
-            ) : (
-              <Agentboard />
+              </>
             )}
+
+            <div style={{ 
+              flex: 1, 
+              display: 'flex', 
+              flexDirection: 'column',
+              position: 'relative',
+              minWidth: 0,
+              width: '100%'
+            }}>
+              {selectedTab === 0 ? (
+                <ChatInterface selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
+              ) : selectedTab === 1 ? (
+                <Terminal selectedAgent={selectedAgent} />
+              ) : selectedTab === 2 ? (
+                <AgentLauncher />
+              ) : selectedTab === 3 ? (
+                <Agentboard />
+              ) : (
+                <EditAgent selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </WalletContext.Provider>
   );
 }
+
+// Create a custom hook to easily access the wallet address
+export const useWallet = () => useContext(WalletContext);
 
 export default App;
