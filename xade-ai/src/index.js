@@ -15,7 +15,7 @@ root.render(
       appId={process.env.REACT_APP_PRIVY_APP_ID}
       config={{
         // Display email and wallet as login methods
-        loginMethods: ['email', 'wallet'],
+        loginMethods: ['email', 'google'],
         // Customize Privy's appearance in your app
         appearance: {
           theme: 'dark',
@@ -26,6 +26,10 @@ root.render(
         embeddedWallets: {
           createOnLogin: 'users-without-wallets',
         },
+        // Disable analytics to fix the CORS issues
+        analytics: false,
+        // Add local development configuration
+        environment: process.env.NODE_ENV === 'development' ? 'development' : 'production',
       }}
     >
         <BrowserRouter>
