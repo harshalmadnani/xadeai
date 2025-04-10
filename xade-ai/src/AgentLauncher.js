@@ -30,6 +30,7 @@ const AgentLauncher = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSources, setSelectedSources] = useState([]);
   const [selectedActivities, setSelectedActivities] = useState([]);
+  const [imageLoaded, setImageLoaded] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
   const trainingFileInputRef = useRef(null);
@@ -567,6 +568,11 @@ const AgentLauncher = () => {
     setExamplePosts(newList.join('\n\n'));
   };
 
+  // Add a function to handle image loading
+  const handleImageLoad = () => {
+    setImageLoaded(true);
+  };
+
   return (
     <div className="agent-launcher-container">
       <div className="progress-bar-container">
@@ -617,9 +623,19 @@ const AgentLauncher = () => {
           exit={{ opacity: 0, y: -20 }}
           transition={{ duration: 0.5 }}
           className="slide-container"
+          onExitComplete={() => setImageLoaded(false)}
         >
           <div className="slide-content">
-            <div className="image-container">
+            <div className="image-container" style={{ position: 'relative' }}>
+              <div 
+                style={{ 
+                  width: '90%',
+                  height: '50%',
+                  backgroundColor: '#333',
+                  borderRadius: '12px',
+                  display: imageLoaded ? 'none' : 'block'
+                }}
+              />
               <img 
                 src={slides[currentStep].image} 
                 alt={`Step ${currentStep + 1}`}
@@ -629,8 +645,10 @@ const AgentLauncher = () => {
                   height: '50%',
                   objectFit: "contain",
                   borderRadius: '12px',
+                  display: imageLoaded ? 'block' : 'none'
                 }}
                 loading="eager"
+                onLoad={handleImageLoad}
               />
             </div>
             

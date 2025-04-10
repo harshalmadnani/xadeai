@@ -19,6 +19,7 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.4.2",
     "groq-sdk": "^0.7.0",
+    "http-proxy-middleware": "^3.0.5",
     "mathjs": "^13.1.1",
     "openai": "^4.57.1",
     "react": "^18.3.1",
@@ -30,8 +31,9 @@
     "web-vitals": "^2.1.0",
     "yarn": "^1.22.22"
   },
+  "proxy": "https://auth.privy.io",
   "scripts": {
-    "start": "GENERATE_SOURCEMAP=false react-scripts start",
+    "start": "GENERATE_SOURCEMAP=false PORT=3001 react-scripts start",
     "build": "GENERATE_SOURCEMAP=false react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
