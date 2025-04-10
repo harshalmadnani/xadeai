@@ -1358,7 +1358,7 @@ function ChatInterface({ selectedAgent }) {  // Add selectedAgent as a prop
   // Update the system prompt to include new functions
   const callOpenAIAPI = async (userInput) => {
     try {
-      const response = await axios.post('https://api.xade.xyz/analyze', {
+      const response = await axios.post('https://analyze-slaz.onrender.com/analyze', {
         query: userInput,
         systemPrompt: `You are Xade AI's response agent where the user query was ${userInput} and your character prompt is ${agentPrompt}`
       });
