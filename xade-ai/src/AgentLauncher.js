@@ -32,6 +32,7 @@ const AgentLauncher = () => {
   const [selectedActivities, setSelectedActivities] = useState([]);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
+  const trainingFileInputRef = useRef(null);
   const navigate = useNavigate();
   const [isCreating, setIsCreating] = useState(false);
   const [isImprovingPrompt, setIsImprovingPrompt] = useState(false);
@@ -58,6 +59,9 @@ const AgentLauncher = () => {
   const [twitter2FASecret, setTwitter2FASecret] = useState('');
   const [currentUsername, setCurrentUsername] = useState('');
   const [selectedModel, setSelectedModel] = useState('gpt-4o');
+  const [trainingFiles, setTrainingFiles] = useState([]);
+  const [customContext, setCustomContext] = useState('');
+  const [isUploadingTrainingFiles, setIsUploadingTrainingFiles] = useState(false);
 
   const characterOptions = [
     { value: 'presets', label: 'Presets' },
@@ -103,7 +107,12 @@ const AgentLauncher = () => {
       content: 'You can search for actions and sources',
       hasDataSources: true 
     },
-    
+    {
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture5.png',
+      title: `Add custom training materials for\n${agentName || 'your agent'}`,
+      content: 'Upload PDFs or add text to give your agent specific knowledge',
+      hasTrainingMaterials: true
+    },
     { 
       image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture4.png', 
       title: `How do you want ${agentName || 'your agent'} to sound?`, 
@@ -186,6 +195,33 @@ const AgentLauncher = () => {
 
   const handleUploadClick = () => {
     fileInputRef.current.click();
+  };
+
+  const handleTrainingFileUpload = (event) => {
+    const files = Array.from(event.target.files);
+    if (files.length > 0) {
+      // Check file types and size
+      const validFiles = files.filter(file => {
+        if (file.type !== 'application/pdf' && !file.type.startsWith('text/')) {
+          alert(`File ${file.name} is not a PDF or text file`);
+          return false;
+        }
+        if (file.size > 20 * 1024 * 1024) { // 20MB check
+          alert(`File ${file.name} is larger than 20MB`);
+          return false;
+        }
+        return true;
+      });
+      setTrainingFiles(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const handleTrainingFileUploadClick = () => {
+    trainingFileInputRef.current.click();
+  };
+
+  const handleRemoveTrainingFile = (index) => {
+    setTrainingFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSourceClick = (source) => {
@@ -315,21 +351,49 @@ const AgentLauncher = () => {
             post_configuration: postConfiguration,
             chat_configuration: chatConfiguration,
             twitter_credentials: twitter_credentials ? JSON.stringify(twitter_credentials) : null,
-            model: selectedModel
+            model: selectedModel,
+            custom_context: customContext
           }
         ])
         .select();
 
       if (error) throw error;
 
-      // Only log success if we actually have agent data
+      // Only proceed if we actually have agent data
       if (agentData && agentData.length > 0) {
-        console.log('Agent created successfully:', agentData[0].id);
+        const agentId = agentData[0].id;
+        console.log('Agent created successfully:', agentId);
+        
+        // Upload training files if any exist
+        if (trainingFiles.length > 0) {
+          console.log('Uploading training files for agent ID:', agentId);
+          
+          for (const file of trainingFiles) {
+            try {
+              const formData = new FormData();
+              formData.append('file', file);
+              formData.append('agent_id', agentId);
+              
+              const response = await fetch('https://agentic-context.onrender.com/api/v1/upload', {
+                method: 'POST',
+                body: formData,
+                signal: AbortSignal.timeout(60000) // 60 second timeout
+              });
+              
+              if (!response.ok) {
+                const errorText = await response.text();
+                console.error(`Failed to upload file ${file.name}:`, errorText);
+              } else {
+                console.log(`Successfully uploaded file ${file.name}`);
+              }
+            } catch (uploadError) {
+              console.error(`Error uploading file ${file.name}:`, uploadError);
+            }
+          }
+        }
         
         // Set up posting schedule if posting is enabled
-        if (postConfiguration.enabled) {
-          const agentId = agentData[0].id;
-          
+        if (postConfiguration.enabled) {          
           console.log('Posting configuration is enabled. Setting up posting schedule for agent ID:', agentId);
           console.log('Posting clients:', postingClients);
           console.log('Posting interval:', postingInterval);
@@ -721,6 +785,194 @@ const AgentLauncher = () => {
                       cursor: 'pointer',
                       fontWeight: '500',
                       marginTop: '20px'
+                    }}
+                  >
+                    Continue
+                  </button>
+                </div>
+              ) : slides[currentStep].hasTrainingMaterials ? (
+                <div style={{ width: '90%' }}>
+                  <p style={{ marginBottom: '20px' }}>{slides[currentStep].content}</p>
+                  
+                  {/* File upload section */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <p style={{ 
+                      marginBottom: '12px', 
+                      fontSize: '16px',
+                      fontWeight: '500' 
+                    }}>Upload PDFs or text files</p>
+                    
+                    <input
+                      type="file"
+                      ref={trainingFileInputRef}
+                      onChange={handleTrainingFileUpload}
+                      accept=".pdf,.txt,.md,.csv,.json"
+                      multiple
+                      style={{ display: 'none' }}
+                    />
+                    
+                    <button 
+                      onClick={handleTrainingFileUploadClick}
+                      style={{
+                        width: '100%',
+                        backgroundColor: '#1a1a1a',
+                        color: 'white',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        border: '1px dashed #666',
+                        cursor: 'pointer',
+                        marginBottom: '16px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      <img src="/upload-icon.png" alt="Upload" style={{ 
+                        width: '16px', 
+                        height: '16px',
+                        opacity: 0.7
+                      }} />
+                      Select files to upload
+                    </button>
+                    
+                    {/* Display uploaded files */}
+                    {trainingFiles.length > 0 && (
+                      <div style={{ marginTop: '16px' }}>
+                        <p style={{ 
+                          marginBottom: '12px', 
+                          fontSize: '14px',
+                          color: '#ccc' 
+                        }}>Uploaded files:</p>
+                        
+                        {trainingFiles.map((file, index) => (
+                          <div 
+                            key={index}
+                            style={{
+                              backgroundColor: '#1a1a1a',
+                              borderRadius: '8px',
+                              padding: '10px 12px',
+                              marginBottom: '8px',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <img 
+                                src={file.type === 'application/pdf' ? '/pdf-icon.png' : '/text-icon.png'} 
+                                alt="File" 
+                                style={{ width: '16px', height: '16px', opacity: 0.7 }}
+                              />
+                              <span style={{ fontSize: '14px' }}>{file.name}</span>
+                              <span style={{ 
+                                fontSize: '12px', 
+                                color: '#999',
+                                marginLeft: '8px' 
+                              }}>
+                                ({(file.size / 1024 / 1024).toFixed(1)} MB)
+                              </span>
+                            </div>
+                            <button
+                              onClick={() => handleRemoveTrainingFile(index)}
+                              style={{
+                                backgroundColor: 'transparent',
+                                border: 'none',
+                                color: '#666',
+                                cursor: 'pointer',
+                                padding: '4px',
+                                fontSize: '16px'
+                              }}
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Custom context text input */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <p style={{ 
+                      marginBottom: '12px', 
+                      fontSize: '16px',
+                      fontWeight: '500' 
+                    }}>Add additional context as text</p>
+                    
+                    <textarea
+                      value={customContext}
+                      onChange={(e) => setCustomContext(e.target.value)}
+                      placeholder="Enter any additional information, knowledge, or instructions you want your agent to learn"
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        backgroundColor: '#1a1a1a',
+                        border: 'none',
+                        borderRadius: '10px',
+                        color: 'white',
+                        minHeight: '120px',
+                        fontSize: '14px',
+                        marginBottom: '8px',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
+                  
+                  {/* Tips section */}
+                  <div style={{ 
+                    backgroundColor: '#1a1a1a',
+                    borderRadius: '12px',
+                    padding: '16px',
+                    marginBottom: '24px'
+                  }}>
+                    <div style={{ 
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      marginBottom: '8px'
+                    }}>
+                      <img 
+                        src="/info-icon.png" 
+                        alt="Info"
+                        style={{ 
+                          width: '16px',
+                          height: '16px',
+                          opacity: 0.7
+                        }}
+                      />
+                      <p style={{ 
+                        margin: 0,
+                        fontSize: '14px',
+                        fontWeight: '500'
+                      }}>Tips for training your agent:</p>
+                    </div>
+                    <ul style={{ 
+                      margin: '0',
+                      paddingLeft: '24px',
+                      color: '#999',
+                      fontSize: '14px'
+                    }}>
+                      <li>PDFs should be less than 20MB in size</li>
+                      <li>Use high-quality, well-structured documents</li>
+                      <li>Include diverse materials to cover different aspects</li>
+                      <li>Text input can be used for specific instructions or knowledge</li>
+                    </ul>
+                  </div>
+                  
+                  <button 
+                    className="next-button"
+                    onClick={handleNext}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '14px',
+                      borderRadius: '12px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      fontSize: '16px'
                     }}
                   >
                     Continue
@@ -1644,12 +1896,26 @@ const AgentLauncher = () => {
 
                       <div style={{ marginBottom: '20px' }}>
                         <p style={{ color: '#666', marginBottom: '8px' }}>Prompt:</p>
-                        <p style={{ margin: 0 }}>{/* Add prompt state variable and display here */}</p>
+                        <p style={{ margin: 0 }}>{prompt}</p>
                       </div>
 
                       <div style={{ marginBottom: '20px' }}>
                         <p style={{ color: '#666', marginBottom: '8px' }}>Sources:</p>
                         <p style={{ margin: 0 }}>{selectedSources.join(', ')}</p>
+                      </div>
+
+                      <div style={{ marginBottom: '20px' }}>
+                        <p style={{ color: '#666', marginBottom: '8px' }}>Training Materials:</p>
+                        <p style={{ margin: 0 }}>
+                          {trainingFiles.length > 0 ? (
+                            <>Files: {trainingFiles.map(file => file.name).join(', ')}</>
+                          ) : (
+                            'No files uploaded'
+                          )}
+                          {customContext ? (
+                            <><br />Custom context provided</>
+                          ) : null}
+                        </p>
                       </div>
 
                       <div>
