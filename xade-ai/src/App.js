@@ -4,7 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './App.css';
 import ChatInterface from './ChatInterface';
 import Terminal from './terminal';
-import { Tabs, Tab } from '@mui/material';
+import { Tabs, Tab, Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions, Button } from '@mui/material';
 import ChatIcon from '@mui/icons-material/Chat';
 import CodeIcon from '@mui/icons-material/Code';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
@@ -12,6 +12,7 @@ import AgentLauncher from './AgentLauncher';
 import MenuIcon from '@mui/icons-material/Menu';
 import IconButton from '@mui/material/IconButton';
 import CloseIcon from '@mui/icons-material/Close';
+import DeleteIcon from '@mui/icons-material/Delete';
 import AgentDropdown from './dropdown';
 import Agentboard from './agentboard';
 import profile from './profile';
@@ -25,7 +26,7 @@ import { supabase } from './lib/supabase';
 export const WalletContext = createContext(null);
 
 function App() {
-  const { ready, authenticated, login, user } = usePrivy();
+  const { ready, authenticated, login, user, logout } = usePrivy();
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedTab, setSelectedTab] = useState(0);
@@ -35,6 +36,7 @@ function App() {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [agents, setAgents] = useState([]);
   const [walletAddress, setWalletAddress] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   useEffect(() => {
     const handleResize = () => {
@@ -206,12 +208,48 @@ function App() {
           }
         }}
       />
+      <Tab 
+        icon={<DeleteIcon sx={{ fontSize: 24, color: '#ff4444' }} />}
+        label="Delete Account"
+        iconPosition="start"
+        aria-label="delete-account"
+        onClick={() => setDeleteDialogOpen(true)}
+        sx={{ 
+          '&:hover': {
+            backgroundColor: 'rgba(255, 68, 68, 0.1)',
+            borderRadius: '12px',
+            color: '#ff4444',
+          }
+        }}
+      />
     </Tabs>
   );
 
   // Modify AgentDropdown to update selectedAgent
   const handleAgentChange = (agent) => {
     setSelectedAgent(agent);
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      // Delete user's agents from Supabase
+      const { error: deleteError } = await supabase
+        .from('agents2')
+        .delete()
+        .eq('user_id', walletAddress);
+
+      if (deleteError) throw deleteError;
+
+      // Logout from Privy
+      await logout();
+
+      // Close dialog and navigate to home
+      setDeleteDialogOpen(false);
+      navigate('/');
+    } catch (error) {
+      console.error('Error deleting account:', error);
+      alert('Failed to delete account. Please try again.');
+    }
   };
 
   // If Privy is not ready or user is not authenticated, show login page
@@ -378,6 +416,46 @@ function App() {
               />
             )}
           </div>
+
+          {/* Delete Account Confirmation Dialog */}
+          <Dialog
+            open={deleteDialogOpen}
+            onClose={() => setDeleteDialogOpen(false)}
+            PaperProps={{
+              style: {
+                backgroundColor: '#1a1a1a',
+                color: 'white',
+                borderRadius: '12px',
+              }
+            }}
+          >
+            <DialogTitle>Delete Account</DialogTitle>
+            <DialogContent>
+              <DialogContentText style={{ color: 'rgba(255, 255, 255, 0.7)' }}>
+                Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your agents and data.
+              </DialogContentText>
+            </DialogContent>
+            <DialogActions>
+              <Button 
+                onClick={() => setDeleteDialogOpen(false)}
+                style={{ color: 'white' }}
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleDeleteAccount}
+                style={{ 
+                  color: 'white',
+                  backgroundColor: '#ff4444',
+                  '&:hover': {
+                    backgroundColor: '#cc0000',
+                  }
+                }}
+              >
+                Delete Account
+              </Button>
+            </DialogActions>
+          </Dialog>
 
           <div style={{
             display: 'flex',
