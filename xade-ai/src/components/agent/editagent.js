@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { createClient } from '@supabase/supabase-js';
 import { IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import './AgentLauncher.css'; // Reusing styles from AgentLauncher
+import './SocialAgentLauncher.css'; // Reusing styles from SocialAgentLauncher
 import { WalletContext, useWallet } from '../../App';
 const supabaseUrl = 'https://wbsnlpviggcnwqfyfobh.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indic25scHZpZ2djbndxZnlmb2JoIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczODc2NTcwNiwiZXhwIjoyMDU0MzQxNzA2fQ.tr6PqbiAXQYSQSpG2wS6I4DZfV1Gc3dLXYhKwBrJLS0';
