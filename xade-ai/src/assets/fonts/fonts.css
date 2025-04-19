@@ -1,0 +1,14 @@
+@font-face {
+  font-family: 'GeneralSans';
+  src: url('./fonts/GeneralSans-Regular.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'GeneralSans-Medium';
+  src: url('./fonts/GeneralSans-Medium.otf') format('opentype');
+}
+
+@font-face {
+  font-family: 'GeneralSans-Bold';
+  src: url('./fonts/GeneralSans-Bold.otf') format('opentype');
+}

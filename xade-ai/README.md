@@ -1,6 +1,36 @@
-# Getting Started with Create React App
+# Xade AI - Agent Platform
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This project provides a platform for launching, managing, and interacting with AI agents.
+
+## Project Structure
+
+```
+xade-ai/
+├── public/              # Static files
+│   └── fonts/           # Font files
+├── src/                 # Source files
+│   ├── assets/          # Images, fonts, and other assets
+│   │   ├── images/      # Image assets
+│   │   └── fonts/       # Font files
+│   ├── components/      # React components
+│   │   ├── agent/       # Agent-related components
+│   │   ├── agentboard/  # Agent board component
+│   │   ├── auth/        # Authentication components
+│   │   ├── chat/        # Chat interface components
+│   │   ├── terminal/    # Terminal component
+│   │   └── common/      # Shared components
+│   ├── data/            # Training data and datasets
+│   ├── lib/             # Library configurations
+│   ├── tests/           # Test files
+│   ├── utils/           # Utility functions
+│   │   └── data/        # Data files
+│   ├── App.js           # Main application component
+│   ├── App.css          # Main application styles
+│   └── index.js         # Application entry point
+├── .env                 # Environment variables
+├── package.json         # Project dependencies
+└── README.md            # Project documentation
+```
 
 ## Available Scripts
 
@@ -9,7 +39,7 @@ In the project directory, you can run:
 ### `yarn start`
 
 Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+Open [http://localhost:3001](http://localhost:3001) to view it in your browser.
 
 The page will reload when you make changes.\
 You may also see any lint errors in the console.
