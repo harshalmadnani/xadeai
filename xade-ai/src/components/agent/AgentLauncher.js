@@ -100,19 +100,59 @@ const AgentLauncher = () => {
                   Let's get started
                 </button>
               ) : currentStep === 1 ? (
-                <div className="agent-type-options">
-                  <button 
-                    className="agent-type-button"
-                    onClick={() => handleAgentTypeSelect('trading')}
-                  >
-                    Trading Agents
-                  </button>
-                  <button 
-                    className="agent-type-button"
-                    onClick={() => handleAgentTypeSelect('social')}
-                  >
-                    Social Agents
-                  </button>
+                <div style={{ width: '90%' }}>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '16px',
+                    marginBottom: '20px'
+                  }}>
+                    <div
+                      onClick={() => handleAgentTypeSelect('trading')}
+                      style={{
+                        backgroundColor: '#1a1a1a',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        border: selectedAgentType === 'trading' ? '1px solid white' : '1px solid transparent'
+                      }}
+                    >
+                      <img 
+                        src="https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture8.png" 
+                        alt="Trading Agents"
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          marginBottom: '8px',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <p style={{ margin: 0, textAlign: 'center' }}>Trading Agents</p>
+                    </div>
+                    
+                    <div
+                      onClick={() => handleAgentTypeSelect('social')}
+                      style={{
+                        backgroundColor: '#1a1a1a',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        border: selectedAgentType === 'social' ? '1px solid white' : '1px solid transparent'
+                      }}
+                    >
+                      <img 
+                        src="https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture9.png" 
+                        alt="Social Agents"
+                        style={{
+                          width: '100%',
+                          height: 'auto',
+                          marginBottom: '8px',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <p style={{ margin: 0, textAlign: 'center' }}>Social Agents</p>
+                    </div>
+                  </div>
                 </div>
               ) : null}
             </div>
