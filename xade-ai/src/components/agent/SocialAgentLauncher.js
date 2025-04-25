@@ -1642,7 +1642,18 @@ const SocialAgentLauncher = () => {
                 </div>
               ) : slides[currentStep].hasXConfig ? (
                 <>
-                  <p>{slides[currentStep].content}</p>
+                  {/* Subhead for automated account labeling - move above the form, styled in grey */}
+                  <div style={{ marginBottom: '18px', color: '#aaa', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span>Make sure to set your account as automated on X</span>
+                    <a 
+                      href="https://devcommunity.x.com/t/introducing-automated-account-labeling/166830" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      style={{ color: '#1da1f2', textDecoration: 'underline', fontSize: '13px', marginLeft: '8px' }}
+                    >
+                      Read Guide
+                    </a>
+                  </div>
                   <div style={{ width: '90%' }}>
                     <div style={{ marginBottom: '20px' }}>
                       <p style={{ color: '#666', marginBottom: '8px' }}>Twitter Username</p>
@@ -1699,7 +1710,17 @@ const SocialAgentLauncher = () => {
                           marginBottom: '16px'
                         }}
                       />
-                      <p style={{ color: '#666', marginBottom: '8px' }}>Twitter 2FA Secret (required)</p>
+                      <p style={{ color: '#666', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        Twitter 2FA Secret (required)
+                        <a 
+                          href="https://devcommunity.x.com/t/introducing-automated-account-labeling/166830" 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          style={{ color: '#1da1f2', textDecoration: 'underline', fontSize: '13px', marginLeft: '8px' }}
+                        >
+                          Read Guide
+                        </a>
+                      </p>
                       <input
                         type="text"
                         value={twitter2FASecret}
