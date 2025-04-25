@@ -66,6 +66,10 @@ const SocialAgentLauncher = () => {
   const [trainingFiles, setTrainingFiles] = useState([]);
   const [customContext, setCustomContext] = useState('');
   const [isUploadingTrainingFiles, setIsUploadingTrainingFiles] = useState(false);
+  const [showXConfigError, setShowXConfigError] = useState(false);
+  const isXConfigAllEmpty = !twitterUsername && !twitterEmail && !twitterPassword && !twitter2FASecret;
+  const isXConfigAllFilled = twitterUsername && twitterEmail && twitterPassword && twitter2FASecret;
+  const isXConfigValid = isXConfigAllEmpty || isXConfigAllFilled;
 
   const characterOptions = [
     { value: 'presets', label: 'Presets' },
@@ -336,6 +340,21 @@ const SocialAgentLauncher = () => {
         }
       }
 
+      // Twitter credentials completeness check
+      const anyTwitterField = twitterUsername.trim() || twitterPassword || twitterEmail.trim() || twitter2FASecret.trim();
+      const allTwitterFields = twitterUsername.trim() && twitterPassword && twitterEmail.trim();
+      if (anyTwitterField && !allTwitterFields) {
+        alert('Please fill in all Twitter credential fields (username, password, and email) if you want to use X integration.');
+        setIsCreating(false);
+        return;
+      }
+      // Username should not contain '@'
+      if (twitterUsername.includes('@')) {
+        alert('Twitter username should not contain the @ symbol. Please remove it.');
+        setIsCreating(false);
+        return;
+      }
+
       // Insert agent data into agents2 table with model
       const { data: agentData, error } = await supabase
         .from('agents2')
@@ -372,28 +391,47 @@ const SocialAgentLauncher = () => {
         // Upload training files if any exist
         if (trainingFiles.length > 0) {
           console.log('Uploading training files for agent ID:', agentId);
-          
+
+          // Ensure the trainingfiles bucket exists
+          await supabase.storage.createBucket('trainingfiles', {
+            public: true,
+            allowedMimeTypes: ['application/pdf', 'text/plain', 'text/csv', 'application/json', 'text/markdown'],
+            fileSizeLimit: 20 * 1024 * 1024 // 20MB
+          });
+
+          // Optionally collect URLs
+          const uploadedTrainingFileUrls = [];
+
           for (const file of trainingFiles) {
             try {
-              const formData = new FormData();
-              formData.append('file', file);
-              formData.append('agent_id', agentId);
-              
-              const response = await fetch('https://agentic-context.onrender.com/api/v1/upload', {
-                method: 'POST',
-                body: formData,
-                signal: AbortSignal.timeout(60000) // 60 second timeout
-              });
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error(`Failed to upload file ${file.name}:`, errorText);
-              } else {
-                console.log(`Successfully uploaded file ${file.name}`);
+              const fileExt = file.name.split('.').pop();
+              const filePath = `agent-training/${agentId}/${Date.now()}-${file.name}`;
+              const { error: uploadError, data } = await supabase.storage
+                .from('trainingfiles')
+                .upload(filePath, file, {
+                  cacheControl: '3600',
+                  upsert: false
+                });
+              if (uploadError) {
+                console.error(`Failed to upload file ${file.name}:`, uploadError.message);
+                continue;
               }
+              // Get the public URL for the uploaded file
+              const { data: { publicUrl } } = supabase.storage
+                .from('trainingfiles')
+                .getPublicUrl(filePath);
+              uploadedTrainingFileUrls.push(publicUrl);
+              console.log(`Successfully uploaded file ${file.name} to Supabase:`, publicUrl);
             } catch (uploadError) {
               console.error(`Error uploading file ${file.name}:`, uploadError);
             }
+          }
+          // You can optionally store uploadedTrainingFileUrls in the agent record if needed
+          if (uploadedTrainingFileUrls.length > 0) {
+            await supabase
+              .from('agents2')
+              .update({ trainingfiles: uploadedTrainingFileUrls })
+              .eq('id', agentId);
           }
         }
         
@@ -495,7 +533,7 @@ const SocialAgentLauncher = () => {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          model: 'mixtral-8x7b-32768',
+          model: 'deepseek-r1-distill-llama-70b',
           messages: [
             {
               role: 'system',
@@ -824,11 +862,6 @@ const SocialAgentLauncher = () => {
                         transition: 'all 0.2s ease',
                       }}
                     >
-                      <img src="/pen-loading.png" alt="Improve" style={{ 
-                        width: '16px', 
-                        height: '16px',
-                        filter: prompt.trim() && !isImprovingPrompt ? 'invert(1)' : 'none'
-                      }} />
                       {isImprovingPrompt ? 'Improving...' : 'Improve Prompt'}
                     </button>
                   </div>
@@ -889,11 +922,6 @@ const SocialAgentLauncher = () => {
                         gap: '8px'
                       }}
                     >
-                      <img src="/upload-icon.png" alt="Upload" style={{ 
-                        width: '16px', 
-                        height: '16px',
-                        opacity: 0.7
-                      }} />
                       Select files to upload
                     </button>
                     
@@ -920,11 +948,6 @@ const SocialAgentLauncher = () => {
                             }}
                           >
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                              <img 
-                                src={file.type === 'application/pdf' ? '/pdf-icon.png' : '/text-icon.png'} 
-                                alt="File" 
-                                style={{ width: '16px', height: '16px', opacity: 0.7 }}
-                              />
                               <span style={{ fontSize: '14px' }}>{file.name}</span>
                               <span style={{ 
                                 fontSize: '12px', 
@@ -993,15 +1016,6 @@ const SocialAgentLauncher = () => {
                       gap: '8px',
                       marginBottom: '8px'
                     }}>
-                      <img 
-                        src="/info-icon.png" 
-                        alt="Info"
-                        style={{ 
-                          width: '16px',
-                          height: '16px',
-                          opacity: 0.7
-                        }}
-                      />
                       <p style={{ 
                         margin: 0,
                         fontSize: '14px',
@@ -1227,15 +1241,6 @@ const SocialAgentLauncher = () => {
                       gap: '8px',
                       marginBottom: '8px'
                     }}>
-                      <img 
-                        src="/info-icon.png" 
-                        alt="Info"
-                        style={{ 
-                          width: '16px',
-                          height: '16px',
-                          opacity: 0.7
-                        }}
-                      />
                       <p style={{ 
                         margin: 0,
                         fontSize: '14px',
@@ -1255,23 +1260,6 @@ const SocialAgentLauncher = () => {
                     </ul>
                   </div>
 
-                  <button 
-                    className="next-button"
-                    onClick={handleNext}
-                    style={{
-                      width: '100%',
-                      backgroundColor: 'white',
-                      color: 'black',
-                      padding: '14px',
-                      borderRadius: '12px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontWeight: '500',
-                      fontSize: '16px'
-                    }}
-                  >
-                    Continue
-                  </button>
                 </div>
               ) : slides[currentStep].hasDataSources ? (
                 <div style={{ width: '90%' }}>
@@ -1476,11 +1464,6 @@ const SocialAgentLauncher = () => {
                         transition: 'all 0.2s ease',
                       }}
                     >
-                      <img src="/pen-loading.png" alt="Improve" style={{ 
-                        width: '16px', 
-                        height: '16px',
-                        filter: postingTopics.trim() ? 'invert(1)' : 'none'
-                      }} />
                       Improve Topics
                     </button>
                   </div>
@@ -1667,7 +1650,7 @@ const SocialAgentLauncher = () => {
                         type="text"
                         value={twitterUsername}
                         onChange={(e) => setTwitterUsername(e.target.value)}
-                        placeholder="@username"
+                        placeholder="username without @"
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -1716,7 +1699,7 @@ const SocialAgentLauncher = () => {
                           marginBottom: '16px'
                         }}
                       />
-                      <p style={{ color: '#666', marginBottom: '8px' }}>Twitter 2FA Secret (if applicable)</p>
+                      <p style={{ color: '#666', marginBottom: '8px' }}>Twitter 2FA Secret (required)</p>
                       <input
                         type="text"
                         value={twitter2FASecret}
@@ -1735,33 +1718,39 @@ const SocialAgentLauncher = () => {
                         }}
                       />
                     </div>
+                    {/* X Config Continue Button with validation */}
                     <div style={{ display: 'flex', gap: '10px', marginTop: '20px' }}>
-                      <button 
+                      <button
                         className="next-button"
                         onClick={() => {
-                          setSetupX(true);
-                          handleNext();
+                          if (!isXConfigValid) {
+                            setShowXConfigError(true);
+                          } else {
+                            setShowXConfigError(false);
+                            handleNext();
+                          }
                         }}
-                        style={{ flex: 1 }}
+                        disabled={!isXConfigValid}
+                        style={{
+                          width: '100%',
+                          backgroundColor: isXConfigValid ? 'white' : '#666',
+                          color: isXConfigValid ? 'black' : '#999',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          cursor: isXConfigValid ? 'pointer' : 'not-allowed',
+                          fontWeight: '500',
+                        }}
+                        title={!isXConfigValid ? 'Fill all 4 fields or leave all empty' : ''}
                       >
-                        Save and Continue
-                      </button>
-                      <button 
-                        className="next-button"
-                        onClick={() => {
-                          setSetupX(false);
-                          handleNext();
-                        }}
-                        style={{ 
-                          flex: 1,
-                          backgroundColor: 'transparent',
-                          border: '1px solid white',
-                          color: '#FFF'
-                        }}
-                      >
-                        Skip for now
+                        Continue
                       </button>
                     </div>
+                    {showXConfigError && (
+                      <div style={{ color: 'red', marginTop: '10px' }}>
+                        Please fill all 4 fields or leave all empty to continue.
+                      </div>
+                    )}
                   </div>
                 </>
               ) : slides[currentStep].hasXLabel ? (
@@ -2196,7 +2185,9 @@ const SocialAgentLauncher = () => {
                             currentStep === 8 ||
                             currentStep === 3 ||
                             slides[currentStep].hasReview ||
-                            slides[currentStep].hasXDetails) ? 'none' : 'block'
+                            slides[currentStep].hasXDetails ||
+                            slides[currentStep].hasXConfig // Hide default Continue button for X config step
+                    ) ? 'none' : 'block'
                   }}
                 >
                   Continue
