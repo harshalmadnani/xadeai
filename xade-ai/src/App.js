@@ -15,11 +15,11 @@ import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AgentDropdown from './components/common/dropdown';
 import Agentboard from './components/agentboard/agentboard';
-import profile from './components/auth/profile';
+import Profile from './components/auth/profile';
 import DashboardIcon from '@mui/icons-material/Leaderboard';
 import PersonIcon from '@mui/icons-material/Person';
 import EditIcon from '@mui/icons-material/Edit';
-import EditAgent from './components/agent/editagent';
+import ManageAgents from './components/agent/editagent';
 import { supabase } from './lib/supabase';
 
 // Create a context for the wallet address
@@ -74,7 +74,7 @@ function App() {
   }, [authenticated, user]);
 
   const getTabName = (index) => {
-    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board', 'Edit Agent'];
+    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board', 'Manage Agent'];
     return tabs[index] || '';
   };
 
@@ -197,9 +197,9 @@ function App() {
       />
       <Tab 
         icon={<EditIcon sx={{ fontSize: 24 }} />}
-        label="Edit Agent"
+        label="Manage Agent"
         iconPosition="start"
-        aria-label="edit-agent"
+        aria-label="manage-agent"
         sx={{ 
           '&:hover': {
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -208,6 +208,7 @@ function App() {
           }
         }}
       />
+     
       <Tab 
         icon={<DeleteIcon sx={{ fontSize: 24, color: '#ff4444' }} />}
         label="Delete Account"
@@ -534,9 +535,9 @@ function App() {
                 <AgentLauncher />
               ) : selectedTab === 3 ? (
                 <Agentboard />
-              ) : (
-                <EditAgent selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
-              )}
+              ) :  (
+                <ManageAgents selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
+              ) }
             </div>
           </div>
         </div>
