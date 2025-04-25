@@ -488,7 +488,7 @@ const TradingAgentLauncher = () => {
                 </div>
               ) : slides[currentStep].hasStrategy ? (
                 <div style={{ width: '90%' }}>
-                  <p>{slides[currentStep].content}</p>
+                  <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(2, 1fr)',
@@ -550,7 +550,7 @@ const TradingAgentLauncher = () => {
                 </div>
               ) : slides[currentStep].hasDataSources ? (
                 <div style={{ width: '90%' }}>
-                  <p>{slides[currentStep].content}</p>
+                  <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
                   <input
                     type="text"
                     value={searchTerm}
@@ -603,12 +603,12 @@ const TradingAgentLauncher = () => {
                     placeholder="Search chains..."
                     style={{
                       width: '100%',
-                      padding: '12px',
+                      padding: '8px',
                       backgroundColor: '#1a1a1a',
                       border: 'none',
                       borderRadius: '10px',
                       color: 'white',
-                      height: '40px',
+                      height: '32px',
                       fontSize: '14px',
                       marginBottom: '16px'
                     }}
@@ -650,7 +650,7 @@ const TradingAgentLauncher = () => {
                 </div>
               ) : slides[currentStep].hasBehavior ? (
                 <div style={{ width: '90%' }}>
-                  <p>{slides[currentStep].content}</p>
+                  <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
                   <textarea
                     value={agentBehavior}
                     onChange={(e) => setAgentBehavior(e.target.value)}
