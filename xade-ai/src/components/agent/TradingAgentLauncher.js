@@ -112,14 +112,10 @@ const TradingAgentLauncher = () => {
   );
 
   const chains = [
-    { name: 'Ethereum', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//ethereum.png' },
-    { name: 'Polygon', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//polygon.png' },
-    { name: 'Arbitrum', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//arbitrum.png' },
-    { name: 'Optimism', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//optimism.png' },
-    { name: 'Base', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//base.png' },
-    { name: 'Solana', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//solana.png' },
-    { name: 'Avalanche', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//avalanche.png' },
-    { name: 'BNB Chain', logo: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//bnb.png' }
+    { name: 'Polygon', logo: 'https://coin-images.coingecko.com/coins/images/32440/large/polygon.png?1698233684' },
+    { name: 'Solana', logo: 'https://metacore.mobula.io/78ee4d656f4f152a90d733f4eaaa4e1685e25bc654087acdb62bfe494d668976.png' },
+    { name: 'Base', logo: 'https://dd.dexscreener.com/ds-data/chains/base.png' },
+    { name: 'Kadena', logo: 'https://coin-images.coingecko.com/coins/images/3693/large/Social_-_Profile_Picture.png?1723001308' }
   ];
 
   const filteredChains = chains.filter(chain =>
@@ -149,8 +145,9 @@ const TradingAgentLauncher = () => {
 
   if (!imagesLoaded) {
     return (
-      <div className="agent-launcher-loading" style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
-        Loading...
+      <div className="agent-launcher-loading">
+        <div className="cool-spinner"></div>
+        <div className="cool-loading-text">Loading your Trading Agent experience...</div>
       </div>
     );
   }
@@ -366,10 +363,9 @@ const TradingAgentLauncher = () => {
             
             <div className="content-container">
               <h2 style={{ marginBottom: '1.5rem' }}>{slides[currentStep].title}</h2>
-              <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
-              
               {slides[currentStep].hasInviteCode ? (
                 <div style={{ width: '90%' }}>
+                  <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
                   <input
                     type="text"
                     value={inviteCode}
@@ -492,6 +488,7 @@ const TradingAgentLauncher = () => {
                 </div>
               ) : slides[currentStep].hasStrategy ? (
                 <div style={{ width: '90%' }}>
+                  <p>{slides[currentStep].content}</p>
                   <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(2, 1fr)',
@@ -598,7 +595,7 @@ const TradingAgentLauncher = () => {
                 </div>
               ) : slides[currentStep].hasChains ? (
                 <div style={{ width: '90%' }}>
-                  <p>{slides[currentStep].content}</p>
+                  <p style={{ marginBottom: '20px' }}>{slides[currentStep].content}</p>
                   <input
                     type="text"
                     value={searchTerm}

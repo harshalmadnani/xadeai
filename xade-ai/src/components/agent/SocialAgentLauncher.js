@@ -604,8 +604,9 @@ const SocialAgentLauncher = () => {
 
   if (!imagesLoaded) {
     return (
-      <div className="agent-launcher-loading" style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
-        Loading...
+      <div className="agent-launcher-loading">
+        <div className="cool-spinner"></div>
+        <div className="cool-loading-text">Loading your Social Agent experience...</div>
       </div>
     );
   }
