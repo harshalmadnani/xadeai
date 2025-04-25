@@ -44,6 +44,9 @@ const TradingAgentLauncher = () => {
   const [agentBehavior, setAgentBehavior] = useState('');
   const [followUpQuestions, setFollowUpQuestions] = useState([]);
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
+  const [aiRating, setAiRating] = useState(null);
+  const [aiSteps, setAiSteps] = useState([]);
+  const [reviewEnabled, setReviewEnabled] = useState(false);
 
   const slides = [
     {
@@ -210,24 +213,48 @@ const TradingAgentLauncher = () => {
     );
   };
 
-  const handleGenerateQuestions = async () => {
+  const handleAIRating = async () => {
     if (!agentBehavior.trim()) return;
-    
     setIsGeneratingQuestions(true);
+    setAiRating(null);
+    setAiSteps([]);
+    setFollowUpQuestions([]);
+    setReviewEnabled(false);
     try {
-      // Simulate API call to generate questions
-      // In a real implementation, this would call an API
-      const mockQuestions = [
-        "What specific trading strategies should the agent focus on?",
-        "How frequently should the agent analyze market data?",
-        "What risk management parameters should be implemented?",
-        "Should the agent focus on specific asset classes?",
-        "How should the agent handle market volatility?"
-      ];
-      
-      setFollowUpQuestions(mockQuestions);
+      // Simulate API call delay
+      await new Promise(res => setTimeout(res, 1200));
+      // Simulate AI response
+      // For demo: random rating 6-10
+      const rating = Math.floor(Math.random() * 5) + 6; // 6-10
+      setAiRating(rating);
+      if (rating < 8) {
+        // Simulate follow-up questions
+        setFollowUpQuestions([
+          "What specific trading strategies should the agent focus on?",
+          "How frequently should the agent analyze market data?",
+          "What risk management parameters should be implemented?",
+          "Should the agent focus on specific asset classes?",
+          "How should the agent handle market volatility?"
+        ]);
+        setAiSteps([]);
+        setReviewEnabled(false);
+      } else {
+        // Simulate steps
+        setAiSteps([
+          "Analyze market trends using technical indicators.",
+          "Monitor social sentiment for trading signals.",
+          "Execute trades based on predefined criteria.",
+          "Apply risk management rules to all trades.",
+          "Provide daily performance summaries."
+        ]);
+        setFollowUpQuestions([]);
+        setReviewEnabled(true);
+      }
     } catch (error) {
-      console.error('Error generating questions:', error);
+      setAiRating(null);
+      setAiSteps([]);
+      setFollowUpQuestions([]);
+      setReviewEnabled(false);
     } finally {
       setIsGeneratingQuestions(false);
     }
@@ -670,7 +697,7 @@ const TradingAgentLauncher = () => {
                   />
 
                   <button 
-                    onClick={handleGenerateQuestions}
+                    onClick={handleAIRating}
                     disabled={!agentBehavior.trim() || isGeneratingQuestions}
                     style={{ 
                       width: '100%',
@@ -690,7 +717,7 @@ const TradingAgentLauncher = () => {
                   >
                     {isGeneratingQuestions ? (
                       <>
-                        Generating questions
+                        Analyzing...
                         <div style={loadingAnimation} />
                       </>
                     ) : (
@@ -700,15 +727,15 @@ const TradingAgentLauncher = () => {
 
                   <button 
                     onClick={handleNext}
-                    disabled={!agentBehavior.trim()}
+                    disabled={!reviewEnabled}
                     style={{ 
                       width: '100%',
-                      backgroundColor: !agentBehavior.trim() ? '#666' : '#222',
+                      backgroundColor: !reviewEnabled ? '#666' : '#222',
                       color: 'white',
                       padding: '12px',
                       borderRadius: '8px',
                       border: 'none',
-                      cursor: !agentBehavior.trim() ? 'default' : 'pointer',
+                      cursor: !reviewEnabled ? 'default' : 'pointer',
                       fontWeight: '500',
                       marginBottom: '20px',
                       display: 'flex',
@@ -719,6 +746,12 @@ const TradingAgentLauncher = () => {
                   >
                     Review
                   </button>
+
+                  {aiRating !== null && (
+                    <div style={{ color: 'white', marginBottom: '12px', fontSize: '16px', fontWeight: 500 }}>
+                      AI Rating: <span style={{ color: aiRating >= 8 ? '#4caf50' : '#ff9800' }}>{aiRating} / 10</span>
+                    </div>
+                  )}
 
                   {followUpQuestions.length > 0 && (
                     <div style={{ 
@@ -740,6 +773,32 @@ const TradingAgentLauncher = () => {
                       }}>
                         {followUpQuestions.map((question, index) => (
                           <li key={index} style={{ marginBottom: '8px' }}>{question}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {aiSteps.length > 0 && (
+                    <div style={{ 
+                      backgroundColor: '#1a1a1a',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '20px'
+                    }}>
+                      <p style={{ 
+                        color: '#4caf50', 
+                        marginBottom: '12px',
+                        fontSize: '14px',
+                        fontWeight: 600
+                      }}>Strategy Steps:</p>
+                      <ul style={{ 
+                        margin: 0,
+                        paddingLeft: '20px',
+                        color: 'white',
+                        fontSize: '14px'
+                      }}>
+                        {aiSteps.map((step, index) => (
+                          <li key={index} style={{ marginBottom: '8px' }}>{step}</li>
                         ))}
                       </ul>
                     </div>
