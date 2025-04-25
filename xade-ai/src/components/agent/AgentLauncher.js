@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './SocialAgentLauncher.css';
 import TradingAgentLauncher from './TradingAgentLauncher';
@@ -7,6 +7,7 @@ import SocialAgentLauncher from './SocialAgentLauncher';
 const AgentLauncher = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedAgentType, setSelectedAgentType] = useState(null);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
 
   const slides = [
     { 
@@ -21,6 +22,39 @@ const AgentLauncher = () => {
       hasAgentTypes: true
     }
   ];
+
+  // All images used in the component
+  const imageUrls = [
+    'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture.png',
+    'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture2.png',
+    'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture8.png',
+    'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture9.png',
+  ];
+
+  useEffect(() => {
+    let isMounted = true;
+    let loadedCount = 0;
+    imageUrls.forEach((url) => {
+      const img = new window.Image();
+      img.src = url;
+      img.onload = img.onerror = () => {
+        loadedCount++;
+        if (loadedCount === imageUrls.length && isMounted) {
+          setImagesLoaded(true);
+        }
+      };
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  // Show loading spinner/message until all images are loaded
+  if (!imagesLoaded) {
+    return (
+      <div className="agent-launcher-loading" style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
+        Loading...
+      </div>
+    );
+  }
 
   const handleNext = () => {
     if (currentStep < slides.length - 1) {

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -33,6 +33,7 @@ const SocialAgentLauncher = () => {
   const [selectedActivities, setSelectedActivities] = useState([]);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showAgentLauncher, setShowAgentLauncher] = useState(false);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
   const trainingFileInputRef = useRef(null);
@@ -575,6 +576,39 @@ const SocialAgentLauncher = () => {
   const handleImageLoad = () => {
     setImageLoaded(true);
   };
+
+  // Preload all static images in slides, activity selection, and UI icons
+  useEffect(() => {
+    let isMounted = true;
+    const extraImages = [
+      'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture8.png',
+      'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture9.png',
+    ];
+    const urls = [
+      ...slides.map(slide => slide.image),
+      ...extraImages
+    ];
+    let loadedCount = 0;
+    urls.forEach((url) => {
+      const img = new window.Image();
+      img.src = url;
+      img.onload = img.onerror = () => {
+        loadedCount++;
+        if (loadedCount === urls.length && isMounted) {
+          setImagesLoaded(true);
+        }
+      };
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  if (!imagesLoaded) {
+    return (
+      <div className="agent-launcher-loading" style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
+        Loading...
+      </div>
+    );
+  }
 
   // If showing AgentLauncher, render it instead of SocialAgentLauncher content
   if (showAgentLauncher) {

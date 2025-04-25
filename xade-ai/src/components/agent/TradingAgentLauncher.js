@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IconButton } from '@mui/material';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
@@ -30,6 +30,9 @@ const TradingAgentLauncher = () => {
   const [agentImage, setAgentImage] = useState(null);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [showAgentLauncher, setShowAgentLauncher] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
+  const [inviteError, setInviteError] = useState('');
+  const [imagesLoaded, setImagesLoaded] = useState(false);
   const containerRef = useRef(null);
   const fileInputRef = useRef(null);
   const navigate = useNavigate();
@@ -43,6 +46,12 @@ const TradingAgentLauncher = () => {
   const [isGeneratingQuestions, setIsGeneratingQuestions] = useState(false);
 
   const slides = [
+    {
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture2.png',
+      title: 'Enter Invite Code',
+      content: 'Please enter your invitation code to continue',
+      hasInviteCode: true
+    },
     { 
       image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture2.png', 
       title: 'It all starts with a name', 
@@ -116,6 +125,44 @@ const TradingAgentLauncher = () => {
   const filteredChains = chains.filter(chain =>
     chain.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Preload all static images in slides and chains
+  useEffect(() => {
+    let isMounted = true;
+    const urls = [
+      ...slides.map(slide => slide.image),
+      ...chains.map(chain => chain.logo)
+    ];
+    let loadedCount = 0;
+    urls.forEach((url) => {
+      const img = new window.Image();
+      img.src = url;
+      img.onload = img.onerror = () => {
+        loadedCount++;
+        if (loadedCount === urls.length && isMounted) {
+          setImagesLoaded(true);
+        }
+      };
+    });
+    return () => { isMounted = false; };
+  }, []);
+
+  if (!imagesLoaded) {
+    return (
+      <div className="agent-launcher-loading" style={{ color: 'white', textAlign: 'center', padding: '2rem' }}>
+        Loading...
+      </div>
+    );
+  }
+
+  const validateInviteCode = () => {
+    if (inviteCode.toLowerCase() === 'harshal') {
+      setInviteError('');
+      handleNext();
+    } else {
+      setInviteError('Invalid invite code. Please try again.');
+    }
+  };
 
   const handleNext = () => {
     if (currentStep < slides.length - 1) {
@@ -321,7 +368,52 @@ const TradingAgentLauncher = () => {
               <h2 style={{ marginBottom: '1.5rem' }}>{slides[currentStep].title}</h2>
               <p style={{ marginBottom: '1.5rem' }}>{slides[currentStep].content}</p>
               
-              {slides[currentStep].hasForm ? (
+              {slides[currentStep].hasInviteCode ? (
+                <div style={{ width: '90%' }}>
+                  <input
+                    type="text"
+                    value={inviteCode}
+                    onChange={(e) => {
+                      setInviteCode(e.target.value);
+                      setInviteError('');
+                    }}
+                    placeholder="Enter invite code"
+                    style={{
+                      width: '100%',
+                      padding: '10px 12px',
+                      marginBottom: '16px',
+                      backgroundColor: '#1a1a1a',
+                      border: inviteError ? '1px solid red' : 'none',
+                      borderRadius: '10px',
+                      color: 'white',
+                      height: '40px',
+                      fontSize: '14px'
+                    }}
+                  />
+                  {inviteError && (
+                    <p style={{ color: 'red', fontSize: '14px', marginBottom: '16px' }}>
+                      {inviteError}
+                    </p>
+                  )}
+                  <button 
+                    className="next-button"
+                    onClick={validateInviteCode}
+                    style={{ 
+                      width: '100%',
+                      backgroundColor: !inviteCode.trim() ? '#666' : 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: !inviteCode.trim() ? 'default' : 'pointer',
+                      fontWeight: '500'
+                    }}
+                    disabled={!inviteCode.trim()}
+                  >
+                    Continue
+                  </button>
+                </div>
+              ) : slides[currentStep].hasForm ? (
                 <>
                   <p>{slides[currentStep].content}</p>
                   <input
@@ -765,7 +857,7 @@ const TradingAgentLauncher = () => {
                 </div>
               ) : null}
 
-              {currentStep === 0 ? (
+              {currentStep === 1 ? (
                 <button 
                   className="next-button"
                   onClick={handleNext}
@@ -784,79 +876,7 @@ const TradingAgentLauncher = () => {
                 >
                   Continue
                 </button>
-              ) : currentStep === 1 ? (
-                <button 
-                  className="next-button"
-                  onClick={handleNext}
-                  style={{ 
-                    marginTop: '1rem',
-                    width: '100%',
-                    backgroundColor: 'white',
-                    color: 'black',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  Continue
-                </button>
-              ) : currentStep === 2 ? (
-                <button 
-                  className="next-button"
-                  onClick={handleNext}
-                  style={{ 
-                    marginTop: '1rem',
-                    width: '100%',
-                    backgroundColor: 'white',
-                    color: 'black',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  Continue
-                </button>
-              ) : currentStep === 3 ? (
-                <button 
-                  className="next-button"
-                  onClick={handleNext}
-                  style={{ 
-                    marginTop: '1rem',
-                    width: '100%',
-                    backgroundColor: 'white',
-                    color: 'black',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  Continue
-                </button>
-              ) : currentStep === 4 ? (
-                <button 
-                  className="next-button"
-                  onClick={handleNext}
-                  style={{ 
-                    marginTop: '1rem',
-                    width: '100%',
-                    backgroundColor: 'white',
-                    color: 'black',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    cursor: 'pointer',
-                    fontWeight: '500'
-                  }}
-                >
-                  Continue
-                </button>
-              ) : currentStep === 5 ? (
+              ) : (currentStep > 1 && currentStep < 7) ? (
                 <button 
                   className="next-button"
                   onClick={handleNext}
