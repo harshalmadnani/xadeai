@@ -668,7 +668,7 @@ const TradingAgentLauncher = () => {
                       resize: 'vertical'
                     }}
                   />
-                  
+
                   <button 
                     onClick={handleGenerateQuestions}
                     disabled={!agentBehavior.trim() || isGeneratingQuestions}
@@ -681,7 +681,7 @@ const TradingAgentLauncher = () => {
                       border: 'none',
                       cursor: !agentBehavior.trim() || isGeneratingQuestions ? 'default' : 'pointer',
                       fontWeight: '500',
-                      marginBottom: '20px',
+                      marginBottom: '12px',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -694,8 +694,30 @@ const TradingAgentLauncher = () => {
                         <div style={loadingAnimation} />
                       </>
                     ) : (
-                      'Generate Follow-up Questions'
+                      'Continue'
                     )}
+                  </button>
+
+                  <button 
+                    onClick={handleNext}
+                    disabled={!agentBehavior.trim()}
+                    style={{ 
+                      width: '100%',
+                      backgroundColor: !agentBehavior.trim() ? '#666' : '#222',
+                      color: 'white',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: !agentBehavior.trim() ? 'default' : 'pointer',
+                      fontWeight: '500',
+                      marginBottom: '20px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    Review
                   </button>
 
                   {followUpQuestions.length > 0 && (
@@ -709,7 +731,7 @@ const TradingAgentLauncher = () => {
                         color: '#666', 
                         marginBottom: '12px',
                         fontSize: '14px'
-                      }}>Suggested follow-up questions:</p>
+                      }}>follow-up questions:</p>
                       <ul style={{ 
                         margin: 0,
                         paddingLeft: '20px',
@@ -873,7 +895,7 @@ const TradingAgentLauncher = () => {
                 >
                   Continue
                 </button>
-              ) : (currentStep > 1 && currentStep < 7) ? (
+              ) : (currentStep > 1 && currentStep < 7 && currentStep !== 6) ? (
                 <button 
                   className="next-button"
                   onClick={handleNext}
