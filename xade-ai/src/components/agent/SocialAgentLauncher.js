@@ -2136,8 +2136,8 @@ const SocialAgentLauncher = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="gpt-4o">GPT-4o</option>
-                    <option value="io-net">Llama-3.3-70B-Instruct by io-net</option>
+                    <option value="gpt-4o">GPT-o3-mini</option>
+                    <option value="io-net">DeepSeek-R1</option>
                   </select>
                   
                   <button 
