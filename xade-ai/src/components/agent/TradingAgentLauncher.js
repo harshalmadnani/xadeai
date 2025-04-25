@@ -96,6 +96,12 @@ const TradingAgentLauncher = () => {
       title: 'Review',
       content: '',
       hasReview: true
+    },
+    {
+      image: 'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture11.png',
+      title: 'Your agent is ready!',
+      content: 'Deposit funds to your agent wallet to get started',
+      hasAgentLive: true
     }
   ];
 
@@ -890,7 +896,7 @@ const TradingAgentLauncher = () => {
 
                   <button 
                     className="next-button"
-                    onClick={handleCreateAgent}
+                    onClick={handleNext}
                     disabled={isCreating}
                     style={{
                       width: '100%',
@@ -931,6 +937,32 @@ const TradingAgentLauncher = () => {
                     }}
                   >
                     Change Info
+                  </button>
+                </div>
+              ) : slides[currentStep].hasAgentLive ? (
+                <div style={{ width: '90%', textAlign: 'center' }}>
+                  <img
+                    src={"https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture2.png"}
+                    alt="Agent Live"
+                    style={{ width: '120px', margin: '0 auto 24px', display: 'block' }}
+                  />
+                  <h2 style={{ color: '#4caf50', marginBottom: '16px' ,fontSize: '12px'}}>{"Your agent wallet is: 0x926cB91d10545fD08cBFDa86127F55D70fbA05e6"}</h2>
+                  <p style={{ color: 'white', fontSize: '18px', marginBottom: '24px' }}>{slides[currentStep].content}</p>
+                  <button
+                    onClick={() => setShowAgentLauncher(true)}
+                    style={{
+                      width: '100%',
+                      backgroundColor: 'white',
+                      color: 'black',
+                      padding: '12px',
+                      borderRadius: '8px',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: '500',
+                      fontSize: '16px'
+                    }}
+                  >
+                    Manage Agent
                   </button>
                 </div>
               ) : null}
