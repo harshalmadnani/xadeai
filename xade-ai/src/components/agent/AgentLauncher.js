@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import './SocialAgentLauncher.css';
-import TradingAgentLauncher from './TradingAgentLauncher';
 import SocialAgentLauncher from './SocialAgentLauncher';
 
 const AgentLauncher = () => {
@@ -27,7 +26,6 @@ const AgentLauncher = () => {
   const imageUrls = [
     'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture.png',
     'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture2.png',
-    'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture8.png',
     'https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture9.png',
   ];
 
@@ -74,9 +72,7 @@ const AgentLauncher = () => {
   };
 
   // If a specific agent type is selected, render that component
-  if (selectedAgentType === 'trading') {
-    return <TradingAgentLauncher />;
-  } else if (selectedAgentType === 'social') {
+  if (selectedAgentType === 'social') {
     return <SocialAgentLauncher />;
   }
 
@@ -138,33 +134,10 @@ const AgentLauncher = () => {
                 <div style={{ width: '90%' }}>
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gridTemplateColumns: '1fr',
                     gap: '16px',
                     marginBottom: '20px'
                   }}>
-                    <div
-                      onClick={() => handleAgentTypeSelect('trading')}
-                      style={{
-                        backgroundColor: '#1a1a1a',
-                        borderRadius: '12px',
-                        padding: '16px',
-                        cursor: 'pointer',
-                        border: selectedAgentType === 'trading' ? '1px solid white' : '1px solid transparent'
-                      }}
-                    >
-                      <img 
-                        src="https://wbsnlpviggcnwqfyfobh.supabase.co/storage/v1/object/public/app//picture8.png" 
-                        alt="Trading Agents"
-                        style={{
-                          width: '100%',
-                          height: 'auto',
-                          marginBottom: '8px',
-                          borderRadius: '8px'
-                        }}
-                      />
-                      <p style={{ margin: 0, textAlign: 'center' }}>Trading Agents</p>
-                    </div>
-                    
                     <div
                       onClick={() => handleAgentTypeSelect('social')}
                       style={{

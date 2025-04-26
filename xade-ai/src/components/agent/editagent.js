@@ -1,6 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { useWallet } from '../../App';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import Button from '@mui/material/Button';
+import TextField from '@mui/material/TextField';
 
 function EditAgent() {
   const { walletAddress } = useWallet();
@@ -11,6 +17,11 @@ function EditAgent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [modalAgent, setModalAgent] = useState(null);
+  const [amount, setAmount] = useState('');
+  const [userBalance, setUserBalance] = useState(93);
 
   useEffect(() => {
     if (walletAddress) {
@@ -27,7 +38,7 @@ function EditAgent() {
         .select('*')
         .eq('user_id', walletAddress);
       if (error) throw error;
-      setAgents(data);
+      setAgents(data.map(agent => ({ ...agent, balance: 0 })));
     } catch (err) {
       setError('Failed to fetch agents.');
     } finally {
@@ -67,6 +78,37 @@ function EditAgent() {
     }
   };
 
+  const handleDeposit = () => {
+    if (!modalAgent) return;
+    if (userBalance < 5 || Number(amount) !== 5) return;
+    setAgents(prevAgents => prevAgents.map(agent =>
+      agent.id === modalAgent.id ? { ...agent, balance: 5 } : agent
+    ));
+    setUserBalance(prev => prev - 5);
+    setDepositModalOpen(false);
+    setModalAgent(null);
+    setAmount('');
+  };
+
+  const handleOpenDeposit = (agent) => {
+    setModalAgent(agent);
+    setAmount('');
+    setDepositModalOpen(true);
+  };
+
+  const handleOpenWithdraw = (agent) => {
+    setModalAgent(agent);
+    setAmount('');
+    setWithdrawModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setDepositModalOpen(false);
+    setWithdrawModalOpen(false);
+    setModalAgent(null);
+    setAmount('');
+  };
+
   return (
     <div style={{ minHeight: '100vh', background: '#000', color: '#fff', padding: '2rem' }}>
       <h1 style={{ fontSize: '2.5rem', textAlign: 'center', marginBottom: '2rem' }}>Manage Your Agents</h1>
@@ -74,6 +116,9 @@ function EditAgent() {
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {success && <p style={{ color: 'lightgreen' }}>{success}</p>}
       <div style={{ maxWidth: 800, margin: '0 auto' }}>
+        <div style={{ color: '#8aff8a', fontWeight: 600, fontSize: 18, marginBottom: 24, textAlign: 'right' }}>
+          User Balance: <span style={{ color: '#fff' }}>{`$${userBalance.toFixed(2)}`}</span>
+        </div>
         {agents.length === 0 && !loading && <p>No agents found for your wallet.</p>}
         {agents.map((agent) => (
           <div key={agent.id} style={{
@@ -112,11 +157,13 @@ function EditAgent() {
                     <div style={{ marginBottom: 8, color: '#aaa', fontSize: 14, fontWeight: 500 }}>Agent Address</div>
                     <div style={{ color: '#fff', fontWeight: 600, wordBreak: 'break-all', fontSize: 16, marginBottom: 8 }}>{agent.agent_wallet || 'N/A'}</div>
                     <div style={{ color: '#8aff8a', fontWeight: 600, fontSize: 15, marginBottom: 16 }}>
-                      Balance: <span style={{ color: '#fff' }}>$0.00</span> {/* TODO: Replace with real balance */}
+                      Balance: <span style={{ color: '#fff' }}>
+                        {agent && agent.balance !== undefined && !isNaN(agent.balance) ? `$${Number(agent.balance).toFixed(2)}` : '$0.00'}
+                      </span>
                     </div>
                     <div style={{ display: 'flex', gap: 16 }}>
-                      <button style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer', fontSize: 15, boxShadow: '0 1px 4px 0 #0002' }}>Deposit</button>
-                      <button style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer', fontSize: 15, boxShadow: '0 1px 4px 0 #0002' }}>Withdraw</button>
+                      <button onClick={() => handleOpenDeposit(agent)} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer', fontSize: 15, boxShadow: '0 1px 4px 0 #0002' }}>Deposit</button>
+                      <button onClick={() => handleOpenWithdraw(agent)} style={{ background: '#fff', color: '#000', border: 'none', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer', fontSize: 15, boxShadow: '0 1px 4px 0 #0002' }}>Withdraw</button>
                       <button style={{ background: '#222', color: '#fff', border: '1px solid #444', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer', fontSize: 15 }}>Export</button>
                     </div>
                   </div>
@@ -368,6 +415,66 @@ function EditAgent() {
           </div>
         ))}
       </div>
+      {/* Deposit Modal */}
+      <Dialog open={depositModalOpen} onClose={handleCloseModal} maxWidth="xs" fullWidth>
+        <DialogTitle style={{ color: '#fff', background: '#181818' }}>Deposit Funds</DialogTitle>
+        <DialogContent style={{ background: '#181818', color: '#fff' }}>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ color: '#aaa', fontSize: 14 }}>Available Balance</div>
+            <div style={{ color: '#8aff8a', fontWeight: 600, fontSize: 18, marginBottom: 8 }}>
+              {modalAgent && modalAgent.balance !== undefined && !isNaN(modalAgent.balance) ? `$${Number(modalAgent.balance).toFixed(2)}` : '$0.00'}
+            </div>
+            <div style={{ color: '#aaa', fontSize: 14, marginBottom: 8 }}>User Balance: <span style={{ color: '#8aff8a' }}>{`$${userBalance.toFixed(2)}`}</span></div>
+            <TextField
+              label="Amount"
+              type="number"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              fullWidth
+              InputProps={{ style: { color: '#fff', background: '#222' } }}
+              InputLabelProps={{ style: { color: '#aaa' } }}
+              sx={{ marginBottom: 2 }}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions style={{ background: '#181818' }}>
+          <Button onClick={handleCloseModal} style={{ color: '#aaa' }}>Cancel</Button>
+          <Button
+            variant="contained"
+            style={{ background: '#8aff8a', color: '#000', fontWeight: 700 }}
+            onClick={handleDeposit}
+            disabled={userBalance < 5 || Number(amount) !== 5}
+          >
+            Deposit
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Withdraw Modal */}
+      <Dialog open={withdrawModalOpen} onClose={handleCloseModal} maxWidth="xs" fullWidth>
+        <DialogTitle style={{ color: '#fff', background: '#181818' }}>Withdraw Funds</DialogTitle>
+        <DialogContent style={{ background: '#181818', color: '#fff' }}>
+          <div style={{ marginBottom: 16 }}>
+            <div style={{ color: '#aaa', fontSize: 14 }}>Available Balance</div>
+            <div style={{ color: '#8aff8a', fontWeight: 600, fontSize: 18, marginBottom: 8 }}>
+              {modalAgent && modalAgent.balance !== undefined && !isNaN(modalAgent.balance) ? `$${Number(modalAgent.balance).toFixed(2)}` : '$5.00'}
+            </div>
+            <TextField
+              label="Amount"
+              type="number"
+              value={amount}
+              onChange={e => setAmount(e.target.value)}
+              fullWidth
+              InputProps={{ style: { color: '#fff', background: '#222' } }}
+              InputLabelProps={{ style: { color: '#aaa' } }}
+              sx={{ marginBottom: 2 }}
+            />
+          </div>
+        </DialogContent>
+        <DialogActions style={{ background: '#181818' }}>
+          <Button onClick={handleCloseModal} style={{ color: '#aaa' }}>Cancel</Button>
+          <Button variant="contained" style={{ background: '#8aff8a', color: '#000', fontWeight: 700 }} disabled>Withdraw</Button>
+        </DialogActions>
+      </Dialog>
     </div>
   );
 }
