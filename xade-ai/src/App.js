@@ -29,7 +29,7 @@ function App() {
   const { ready, authenticated, login, user, logout } = usePrivy();
   const navigate = useNavigate();
   const location = useLocation();
-  const [selectedTab, setSelectedTab] = useState(0);
+  const [selectedTab, setSelectedTab] = useState(2);
   const [selectedAgent, setSelectedAgent] = useState(1);
   const [selectedAgentName, setSelectedAgentName] = useState('ALPHACHAD');
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
@@ -74,7 +74,7 @@ function App() {
   }, [authenticated, user]);
 
   const getTabName = (index) => {
-    const tabs = ['Chat', 'Terminal', 'Agent Builder', 'Agent Board', 'Manage Agent'];
+    const tabs = ['Agent Builder', 'Chat', 'Terminal', 'Agent Board', 'Manage Agent'];
     return tabs[index] || '';
   };
 
@@ -100,7 +100,7 @@ function App() {
   // Update URL parsing logic
   useEffect(() => {
     const pathParts = location.pathname.slice(1).split('/');
-    const tabs = ['chat', 'terminal', 'agent-builder', 'agent-board', 'edit-agent'];
+    const tabs = ['agent-builder', 'chat', 'terminal', 'agent-board', 'edit-agent'];
     const tabIndex = tabs.indexOf(pathParts[0]);
     
     if (tabIndex !== -1) {
@@ -144,6 +144,19 @@ function App() {
       }}
     >
       <Tab 
+        icon={<RocketLaunchIcon sx={{ fontSize: 24 }} />}
+        label="Agent Builder"
+        iconPosition="start"
+        aria-label="agent-builder"
+        sx={{ 
+          '&:hover': {
+            backgroundColor: 'rgba(255, 255, 255, 0.05)',
+            borderRadius: '12px',
+            color: 'white',
+          }
+        }}
+      />
+      <Tab 
         icon={<ChatIcon sx={{ fontSize: 24 }} />}
         label="Chat"
         iconPosition="start"
@@ -161,19 +174,6 @@ function App() {
         label="Terminal"
         iconPosition="start"
         aria-label="terminal"
-        sx={{ 
-          '&:hover': {
-            backgroundColor: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '12px',
-            color: 'white',
-          }
-        }}
-      />
-      <Tab 
-        icon={<RocketLaunchIcon sx={{ fontSize: 24 }} />}
-        label="Agent Builder"
-        iconPosition="start"
-        aria-label="agent-builder"
         sx={{ 
           '&:hover': {
             backgroundColor: 'rgba(255, 255, 255, 0.05)',
@@ -407,7 +407,7 @@ function App() {
             >
               <MenuIcon />
             </IconButton>
-            {selectedTab !== 2 && selectedTab !== 3 && (
+            {selectedTab !== 0 && selectedTab !== 3 && (
               <AgentDropdown 
                 onAgentSelect={(id, name) => {
                   setSelectedAgent(id);
@@ -528,11 +528,11 @@ function App() {
               width: '100%'
             }}>
               {selectedTab === 0 ? (
-                <ChatInterface selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
-              ) : selectedTab === 1 ? (
-                <Terminal selectedAgent={selectedAgent} />
-              ) : selectedTab === 2 ? (
                 <AgentLauncher />
+              ) : selectedTab === 1 ? (
+                <ChatInterface selectedAgent={selectedAgent} selectedAgentName={selectedAgentName} />
+              ) : selectedTab === 2 ? (
+                <Terminal selectedAgent={selectedAgent} />
               ) : selectedTab === 3 ? (
                 <Agentboard />
               ) :  (
