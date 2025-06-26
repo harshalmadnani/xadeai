@@ -456,7 +456,7 @@ const SocialAgentLauncher = () => {
           console.log('Sending posting schedule request with payload:', postingPayload);
           
           const response = await fetch(
-            'https://bh0sks2jsh.execute-api.ap-south-1.amazonaws.com/prod/create',
+            'https://ieyyhrqs1h.execute-api.ap-south-1.amazonaws.com/prod/create',
             {
               method: 'POST',
               headers: {
@@ -2157,7 +2157,7 @@ const SocialAgentLauncher = () => {
                       cursor: 'pointer'
                     }}
                   >
-                    <option value="gpt-4o">GPT-o3-mini</option>
+                    <option value="gpt-4o">Grok-3-latest</option>
                     <option value="io-net">DeepSeek-R1</option>
                   </select>
                   
